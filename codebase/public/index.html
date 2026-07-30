@@ -48,7 +48,15 @@
         <div class="topbar-right">
           <span class="mock-badge" id="mockBadge" hidden>MOCK · nội dung soạn tay, không trích từ PDF</span>
           <div class="toolbar" role="toolbar" aria-label="Công cụ chọn nội dung">
-            <span class="tool-hint">Bôi đen một đoạn để hỏi AI</span>
+            <div class="mode-switch" role="radiogroup" aria-label="Chế độ chọn">
+              <button class="tool mode-btn is-active" id="modeTextBtn" type="button" role="radio" aria-checked="true">
+                Bôi đen chữ
+              </button>
+              <button class="tool mode-btn" id="modeImageBtn" type="button" role="radio" aria-checked="false">
+                Khoanh hình
+              </button>
+            </div>
+            <span class="tool-hint" id="toolHint">Bôi đen một đoạn để hỏi AI</span>
             <button class="tool is-muted" id="clearSelectionBtn" type="button">Xoá chọn</button>
           </div>
         </div>

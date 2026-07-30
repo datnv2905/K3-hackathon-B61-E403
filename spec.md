@@ -84,7 +84,9 @@ sinh viên chưa hiểu rõ bài bôi đen/khoanh vùng phần đó rồi AI l�
 
 1. AI tự động hỏi khi sinh viên không cần
 2. AI trích dẫn thông tin bên ngoài (dễ HL)
-3. AI hỏi thêm các câu bên ngoài 
+3. AI hỏi thêm các câu bên ngoài
+4. Không tự động nhận diện hình trong slide — người học tự khoanh vùng cần hỏi
+5. Không dùng OCR — gửi thẳng ảnh cho model có thị giác (OCR mất cấu trúc mũi tên/khối, mà text-layer PDF vốn đã có phần chữ)
 
 ---
 

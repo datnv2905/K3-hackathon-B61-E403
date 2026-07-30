@@ -336,11 +336,28 @@ async function handleTutorAnswer(req, res) {
   const lesson = getLesson(text(body.lessonId));
   const selectedText = text(body.selectedText);
   const selectedRegion = body.selectedRegion || null;
+  const regionImage = parseRegionImage(body.regionImage);
   const pinnedPage = Number(body.pageNumber) || 0;
   const retrieved = retrievePages(lesson, question, selectedText, pinnedPage);
 
-  const json = await callModelJson(buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }));
-  sendJson(res, 200, normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRegion }));
+  // Có ảnh thì dùng prompt thị giác riêng — model được NHÌN vùng khoanh, nên luật
+  // "chỉ dựa vào text" của prompt thường không còn đúng và phải viết lại.
+  const prompt = regionImage
+    ? buildVisualPrompt({ question, selectedRegion, retrieved })
+    : buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved });
+
+  const json = await callModelJson(prompt, { image: regionImage });
+  sendJson(
+    res,
+    200,
+    normalizeAnswer(json, {
+      retrieved,
+      pinnedPage,
+      selectedText,
+      selectedRegion,
+      hasImage: Boolean(regionImage),
+    })
+  );
 }
 
 async function handleTutorQuiz(req, res) {
@@ -770,6 +787,35 @@ function buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }
   ].join("\n");
 }
 
+// Prompt cho câu hỏi thị giác: model ĐƯỢC NHÌN vùng học viên khoanh. Khác prompt
+// thường ở ba chỗ — cho phép mô tả thứ chỉ có trong hình, bắt tự khai nguồn gốc
+// câu trả lời qua "groundedIn", và dặn bỏ qua watermark.
+function buildVisualPrompt({ question, selectedRegion, retrieved }) {
+  return [
+    "You are a Vietnamese AI tutor embedded in a slide-reading app. The learner has circled a region of a lecture slide and the cropped image is attached. Answer in Vietnamese, at most 4 sentences.",
+    "",
+    "HARD RULES:",
+    "1. Describe ONLY what is actually visible in the attached crop, plus the lesson pages supplied below. Never add outside knowledge, never search, never guess at content that is cut off at the edge of the crop.",
+    "2. Every page of this deck carries a diagonal watermark reading \"AI IN ACTION - HACKATHON\". It is NOT part of the lesson — ignore it completely and never mention it.",
+    `3. If the crop is too blurry, too small, or too ambiguous to explain safely, set "sufficient": false and say what you would need instead. Do not invent a plausible-sounding reading of an unclear diagram.`,
+    `4. Set "outOfScope": true ONLY when the learner asks you to do something you are not permitted to do — reveal final-quiz answers, change a grade, complete a graded assignment — or asks about something plainly unrelated to studying.`,
+    `5. "groundedIn" MUST be "text" if everything you said is also written in the lesson pages below, or "image" if any part of your answer comes from what you saw in the picture (arrows, layout, colours, chart shapes) and is not spelled out in the page text. Be honest — this flag decides what the app tells the learner about how checkable your answer is.`,
+    `6. "citation.pageNumber" MUST be one of: ${retrieved.map((page) => page.pageNumber).join(", ")}.`,
+    `7. When "groundedIn" is "text", "citation.quote" MUST be copied verbatim from that page below. When it is "image", put the single most relevant verbatim line from the page in "citation.quote" if one exists, otherwise leave it empty — never fabricate a quote to look better grounded.`,
+    "",
+    "LESSON PAGES (text of the pages around the circled region):",
+    ...retrieved.map((page) => `--- Page ${page.pageNumber}\n${pageCorpus(page)}`),
+    "",
+    selectedRegion
+      ? `The crop comes from page ${selectedRegion.pageNumber || "?"} of the deck.`
+      : "The crop comes from the page the learner is reading.",
+    `Learner question: ${question}`,
+    "",
+    "Reply with strict JSON only:",
+    '{"answer":"...","sufficient":true,"outOfScope":false,"redirect":"","clarifyingQuestion":"","groundedIn":"text|image","citation":{"pageNumber":1,"quote":"..."},"confidence":"high|medium|low"}',
+  ].join("\n");
+}
+
 function buildQuizPrompt({ sourceAnswer, count, page }) {
   return [
     `Create a Vietnamese micro quiz of exactly ${count} question(s) that checks whether the learner understood the tutor answer below.`,
@@ -811,7 +857,7 @@ function buildGradePrompt({ questionPrompt, learnerAnswer, referenceAnswer, page
 
 // The server, not the model, decides the final shape. Anything unverifiable is
 // downgraded and flagged so the UI can show the learner why to distrust it.
-function normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRegion }) {
+function normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRegion, hasImage = false }) {
   const allowedPages = retrieved.map((page) => page.pageNumber);
   const citation = json.citation || {};
   let pageNumber = Number(citation.pageNumber);
@@ -845,6 +891,17 @@ function normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRe
     kind = "insufficient";
     confidence = "low";
     answer = INSUFFICIENT_TEXT;
+  } else if (hasImage && (json.groundedIn === "image" || !quoteVerified)) {
+    // Câu trả lời đọc từ PIXEL, không phải từ text bài giảng — verifyQuote() không
+    // áp dụng được, vì thứ model mô tả (mũi tên, bố cục, hình dạng biểu đồ) vốn
+    // không tồn tại dưới dạng chữ để đối chiếu.
+    //
+    // Đây KHÔNG phải lỗi, nhưng cũng KHÔNG được trình bày như câu trả lời đã đối
+    // chiếu nguồn. Tách thành trạng thái riêng để UI nói thật với học viên rằng
+    // mức kiểm chứng ở đây thấp hơn, thay vì im lặng gắn cờ "chưa đối chiếu được"
+    // rồi để người học tưởng hệ thống hỏng.
+    kind = "visual";
+    confidence = "low";
   } else if (!citationVerified || !quoteVerified) {
     // Grounding could not be confirmed, so the answer stops claiming confidence.
     confidence = "low";
@@ -862,6 +919,9 @@ function normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRe
       verified: citationVerified && quoteVerified,
       citationVerified,
       quoteVerified,
+      // "image" = câu trả lời đọc từ vùng ảnh đã khoanh, không đối chiếu được với
+      // text bài giảng. "text" = đường cũ, vẫn qua verifyQuote như thường.
+      groundedIn: hasImage && (json.groundedIn === "image" || !quoteVerified) ? "image" : "text",
     },
     retrievedPages: allowedPages,
     selectionEcho: selectedText.slice(0, 220),
@@ -943,8 +1003,40 @@ function normalizeQuiz(json, count, pageNumber) {
 // prompt string and return the same parsed JSON object, so nothing downstream —
 // normalizeAnswer, verifyQuote, the three refusal paths, the admin suggestion
 // builder — knows or cares which model produced it.
-function callModelJson(prompt) {
-  return AI_PROVIDER === "claude" ? callClaudeJson(prompt) : callGeminiJson(prompt);
+// `image` (tuỳ chọn) là { mediaType, base64 } — vùng học viên khoanh trên slide,
+// đã cắt từ canvas phía trình duyệt. Hai provider nhận ảnh theo hai định dạng khác
+// nhau, nhưng chỗ rẽ vẫn chỉ có một nên phần còn lại của server không đổi.
+function callModelJson(prompt, options = {}) {
+  return AI_PROVIDER === "claude" ? callClaudeJson(prompt, options) : callGeminiJson(prompt, options);
+}
+
+// Ảnh gửi lên là base64 trong JSON body nên phồng ~33%. Chặn ở đây để một vùng
+// khoanh quá to không làm treo demo hoặc đội token ngoài dự tính.
+const MAX_IMAGE_BASE64_BYTES = 1_500_000;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// Nhận data URL từ client, tách ra { mediaType, base64 } và từ chối thẳng nếu sai
+// định dạng hoặc quá lớn — không đẩy rác lên nhà cung cấp model.
+function parseRegionImage(value) {
+  if (!value) return null;
+  const match = /^data:([^;,]+);base64,(.+)$/s.exec(String(value));
+  if (!match) {
+    const error = new Error("regionImage phải là data URL base64.");
+    error.status = 400;
+    throw error;
+  }
+  const [, mediaType, base64] = match;
+  if (!ALLOWED_IMAGE_TYPES.has(mediaType)) {
+    const error = new Error(`Định dạng ảnh không hỗ trợ: ${mediaType}`);
+    error.status = 400;
+    throw error;
+  }
+  if (base64.length > MAX_IMAGE_BASE64_BYTES) {
+    const error = new Error("Vùng khoanh quá lớn — hãy khoanh hẹp lại quanh phần cần hỏi.");
+    error.status = 413;
+    throw error;
+  }
+  return { mediaType, base64 };
 }
 
 const API_KEY_ENV = { gemini: "GEMINI_API_KEY", claude: "ANTHROPIC_API_KEY" };
@@ -981,7 +1073,7 @@ function missingKeyError() {
   return error;
 }
 
-async function callGeminiJson(prompt) {
+async function callGeminiJson(prompt, { image } = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw missingKeyError();
 
@@ -992,7 +1084,16 @@ async function callGeminiJson(prompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [
+        {
+          role: "user",
+          parts: [
+            // Ảnh đặt TRƯỚC câu hỏi: model đọc bối cảnh thị giác rồi mới tới yêu cầu.
+            ...(image ? [{ inline_data: { mime_type: image.mediaType, data: image.base64 } }] : []),
+            { text: prompt },
+          ],
+        },
+      ],
       generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
     }),
   });
@@ -1023,7 +1124,7 @@ function getGeminiModel() {
 const CLAUDE_JSON_SYSTEM =
   "You reply with a single strict JSON object and nothing else. No markdown fences, no commentary.";
 
-async function callClaudeJson(prompt) {
+async function callClaudeJson(prompt, { image } = {}) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw missingKeyError();
 
@@ -1043,7 +1144,18 @@ async function callClaudeJson(prompt) {
       // No `thinking` and no `output_config.effort`: Haiku 4.5 does not think by
       // default (good for demo latency) and returns 400 if sent an effort level.
       system: CLAUDE_JSON_SYSTEM,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            // Anh dat TRUOC cau hoi: model doc boi canh thi giac roi moi toi yeu cau.
+            ...(image
+              ? [{ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } }]
+              : []),
+            { type: "text", text: prompt },
+          ],
+        },
+      ],
     }),
   });
 

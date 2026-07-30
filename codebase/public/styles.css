@@ -1348,3 +1348,54 @@ body {
   accent-color: var(--brand);
   cursor: pointer;
 }
+
+/* ── Chế độ chọn: bôi đen chữ / khoanh hình ──────────────── */
+
+.mode-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4f6fa;
+}
+
+.mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.mode-btn.is-active {
+  background: var(--panel);
+  color: var(--brand);
+  box-shadow: 0 1px 3px rgba(23, 26, 46, 0.12);
+}
+
+/* Con trỏ chữ thập báo cho người dùng biết đang ở chế độ khoanh vùng. */
+.viewer.is-region-mode .pdf-page-body,
+.viewer.is-region-mode .pdf-page-body canvas {
+  cursor: crosshair;
+}
+
+.region-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.region-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 160px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.chip.visual {
+  background: var(--warn-soft);
+  color: var(--warn);
+}

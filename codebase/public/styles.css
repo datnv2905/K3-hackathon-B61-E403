@@ -1333,3 +1333,18 @@ body {
   background: var(--brand);
   color: #fff;
 }
+
+.admin-autorefresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.admin-autorefresh input {
+  accent-color: var(--brand);
+  cursor: pointer;
+}

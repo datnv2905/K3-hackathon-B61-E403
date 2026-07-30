@@ -3,6 +3,7 @@ import { createSessionChip, requireRole } from "/auth.js";
 const els = {
   lessonSelect: document.querySelector("#lessonSelect"),
   refreshBtn: document.querySelector("#refreshBtn"),
+  autoRefreshToggle: document.querySelector("#autoRefreshToggle"),
   overviewCards: document.querySelector("#overviewCards"),
   pageTableBody: document.querySelector("#pageTableBody"),
   pageTable: document.querySelector("#pageTable"),
@@ -35,10 +36,44 @@ async function init() {
   await loadLessonList();
   const startId = localStorage.getItem("vlearn-admin-lesson") || lessons[0]?.id;
   if (startId) await loadOverview(startId);
+  startAutoRefresh();
+}
+
+/* ── Auto-refresh ────────────────────────────────────────── */
+
+// Để mở màn giảng viên cạnh màn học viên và thấy số liệu nhúc nhích ngay khi học
+// viên thao tác, khỏi phải bấm "Làm mới" mỗi lần.
+//
+// CỐ Ý không bỏ qua khi document.hidden: nếu để hai màn ở hai TAB cùng cửa sổ thì
+// tab admin luôn ẩn, bỏ qua là nó không bao giờ làm mới — đúng ngay kịch bản cần
+// dùng. Trình duyệt vốn đã tự bóp interval của tab nền nên không cần tự chặn.
+// Bù lại, làm mới ngay khi tab được nhìn lại để số liệu không bị cũ.
+const AUTO_REFRESH_MS = 5000;
+let autoRefreshTimer = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  if (!els.autoRefreshToggle?.checked) return;
+  autoRefreshTimer = setInterval(() => {
+    loadOverview(els.lessonSelect.value, { quiet: true });
+  }, AUTO_REFRESH_MS);
+}
+
+function refreshOnVisible() {
+  if (!document.hidden && els.autoRefreshToggle?.checked) {
+    loadOverview(els.lessonSelect.value, { quiet: true });
+  }
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
 }
 
 function bindEvents() {
   els.refreshBtn.addEventListener("click", () => loadOverview(els.lessonSelect.value));
+  els.autoRefreshToggle?.addEventListener("change", startAutoRefresh);
+  document.addEventListener("visibilitychange", refreshOnVisible);
   els.lessonSelect.addEventListener("change", () => {
     localStorage.setItem("vlearn-admin-lesson", els.lessonSelect.value);
     loadOverview(els.lessonSelect.value);
@@ -67,18 +102,25 @@ async function loadLessonList() {
     .join("");
 }
 
-async function loadOverview(lessonId) {
+// quiet = true: dùng cho auto-refresh. Không đóng panel chi tiết đang mở và không
+// nháy "Đang tải…" — nếu không thì cứ vài giây màn hình lại giật một lần, xem
+// song song với màn học viên sẽ rất khó chịu. Lỗi cũng nuốt im để một lần mạng
+// chập không xoá mất số liệu đang hiển thị.
+async function loadOverview(lessonId, { quiet = false } = {}) {
   if (!lessonId) return;
   els.lessonSelect.value = lessonId;
-  closeDetail();
-  els.overviewCards.innerHTML = `<p class="hint">Đang tải…</p>`;
-  els.pageTableBody.innerHTML = "";
+  if (!quiet) {
+    closeDetail();
+    els.overviewCards.innerHTML = `<p class="hint">Đang tải…</p>`;
+    els.pageTableBody.innerHTML = "";
+  }
 
   try {
     const response = await fetch(`/api/admin/overview?lessonId=${encodeURIComponent(lessonId)}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     overview = await response.json();
   } catch (error) {
+    if (quiet) return;
     els.overviewCards.innerHTML = `<p class="hint">Không tải được dữ liệu: ${escapeHtml(error.message)}</p>`;
     overview = null;
     return;
@@ -86,6 +128,10 @@ async function loadOverview(lessonId) {
 
   renderOverviewCards();
   renderPageTable();
+  // Vẽ lại panel chi tiết cho khớp số liệu mới. Bỏ qua khi đang hiện một smart
+  // suggestion vừa tạo — openDetail() ẩn thẻ suggestion đi, auto-refresh mà gọi
+  // vào sẽ xoá mất kết quả người dùng vừa bỏ công (và tiền) tạo ra.
+  if (selectedPage != null && els.suggestionCard.hidden) openDetail(selectedPage);
 }
 
 function renderOverviewCards() {

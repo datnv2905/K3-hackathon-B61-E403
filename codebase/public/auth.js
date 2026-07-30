@@ -1,12 +1,17 @@
 // Đăng nhập GIẢ LẬP cho demo — KHÔNG phải xác thực thật.
 //
 // Hai tài khoản dưới đây là hằng số nằm trong mã nguồn client, mật khẩu để nguyên
-// văn và còn được in ra ngay trên màn hình đăng nhập. Vai trò lưu ở localStorage
+// văn và còn được in ra ngay trên màn hình đăng nhập. Vai trò lưu ở sessionStorage
 // nên người dùng tự sửa được, và mọi API vẫn phục vụ công khai không cần token.
 // Đây là cổng ĐIỀU HƯỚNG cho demo (vào màn học viên hay màn giảng viên), tuyệt
 // đối không phải lớp bảo mật. Xem codebase/MOCKS.md.
 
+// sessionStorage chứ không phải localStorage — CÓ CHỦ ĐÍCH: sessionStorage tách
+// riêng theo từng tab, nên mở tab học viên và tab giảng viên cạnh nhau được. Dùng
+// localStorage thì hai tab dùng chung một phiên, đăng nhập bên này đá bên kia ra.
+// Đánh đổi: đóng tab là mất phiên, phải đăng nhập lại — chấp nhận được cho demo.
 const STORAGE_KEY = "vlearn-session-v1";
+const store = sessionStorage;
 
 export const DEMO_ACCOUNTS = [
   {
@@ -32,7 +37,7 @@ export function findAccount(username, password) {
 }
 
 export function saveSession(account) {
-  localStorage.setItem(
+  store.setItem(
     STORAGE_KEY,
     JSON.stringify({
       username: account.username,
@@ -45,19 +50,19 @@ export function saveSession(account) {
 
 export function getSession() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    return JSON.parse(store.getItem(STORAGE_KEY) || "null");
   } catch {
     return null;
   }
 }
 
 export function logout() {
-  localStorage.removeItem(STORAGE_KEY);
+  store.removeItem(STORAGE_KEY);
   location.href = "/login.html";
 }
 
 // Cổng điều hướng, không phải kiểm soát truy cập: gõ thẳng /admin.html rồi tự đặt
-// localStorage là vào được. Chấp nhận với prototype, không chấp nhận với bản thật.
+// sessionStorage là vào được. Chấp nhận với prototype, không chấp nhận với bản thật.
 export function requireRole(role) {
   const session = getSession();
   if (!session) {

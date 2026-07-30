@@ -196,7 +196,13 @@ body {
 
 .toolbar {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-hint {
+  font-size: 12px;
+  color: var(--ink-faint);
 }
 
 .tool {
@@ -211,12 +217,6 @@ body {
 
 .tool:hover {
   border-color: #c3c9d6;
-}
-
-.tool.is-active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
 }
 
 .tool.is-muted {
@@ -239,11 +239,6 @@ body {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-
-body.is-region-mode .slide-body {
-  cursor: crosshair;
-  user-select: none;
 }
 
 .slide {
@@ -311,10 +306,49 @@ body.is-region-mode .slide-body {
   line-height: 1.55;
 }
 
-.region-box {
+/* ── PDF page rendering ──────────────────────────────────── */
+
+.pdf-slide .slide-body {
+  padding: 0;
+  overflow: hidden;
+  background: #f4f5f9;
+}
+
+.pdf-page-body {
+  position: relative;
+  margin: 0 auto;
+}
+
+.pdf-page-body canvas {
+  display: block;
+}
+
+.pdf-page-body.is-loading {
+  background: repeating-linear-gradient(135deg, #eef0f5, #eef0f5 12px, #e6e8f0 12px, #e6e8f0 24px);
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-page-body.is-loading::after {
+  content: "Đang tải trang…";
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.text-highlight-box {
   position: absolute;
-  border: 2px solid var(--brand);
-  background: rgba(79, 70, 229, 0.11);
+  background: rgba(250, 204, 21, 0.35);
+  border: 1px solid rgba(202, 138, 4, 0.55);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.drag-box {
+  position: absolute;
+  border: 2px dashed var(--brand);
+  background: rgba(79, 70, 229, 0.08);
   border-radius: 4px;
   pointer-events: none;
 }

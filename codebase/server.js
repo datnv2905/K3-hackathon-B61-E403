@@ -1,18 +1,15 @@
 import { createServer } from "node:http";
 import { readFile, appendFile, mkdir } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, join, normalize, relative, resolve } from "node:path";
 
 const rootDir = resolve(process.cwd());
 const publicDir = join(rootDir, "codebase", "public");
-const lessonPath = join(rootDir, "codebase", "lesson", "day06-ai-product.json");
 const varDir = join(rootDir, "codebase", "var");
 const eventLogPath = join(varDir, "events.jsonl");
 const preferredPort = Number(process.env.PORT || 3000);
 
 loadEnv(join(rootDir, ".env"));
-
-const lesson = JSON.parse(readFileSync(lessonPath, "utf8"));
 
 // Canonical wording for the two refusal paths. The model proposes; the server decides
 // the final text, so a chatty model cannot talk its way past a refusal.
@@ -20,11 +17,13 @@ const INSUFFICIENT_TEXT = "Nội dung hiện tại chưa được giải thích 
 const OUT_OF_SCOPE_TEXT = "Câu này ngoài phạm vi mình được phép trả lời trong phiên học.";
 const CLARIFY_TEXT = "Mình chưa chắc bạn đang hỏi phần nào.";
 const RETRIEVAL_TOP_K = 4;
+const DEFAULT_LESSON_ID = "d1-ai-llm-foundation";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
@@ -32,11 +31,25 @@ const mimeTypes = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".ico": "image/x-icon",
+  ".pdf": "application/pdf",
 };
+
+// Module-level state that buildLessonRegistry() (called via top-level await just
+// below) depends on. Must be declared before that call — `let` bindings are in the
+// temporal dead zone until their own declaration runs, and top-level await means
+// the module is still paused on the call below when these would otherwise execute.
+let pdfjsNodeModulePromise = null;
+
+// Loaded once at boot — see buildLessonRegistry(). Top-level await is safe here
+// because package.json declares "type": "module".
+const lessons = await buildLessonRegistry();
+const lessonsById = new Map(lessons.map((entry) => [entry.id, entry]));
 
 const routes = [
   ["GET", "/api/health", handleHealth],
+  ["GET", "/api/lessons", handleLessons],
   ["GET", "/api/lesson", handleLesson],
+  ["GET", "/api/pdf", handlePdf],
   ["POST", "/api/tutor/answer", handleTutorAnswer],
   ["POST", "/api/tutor/quiz", handleTutorQuiz],
   ["POST", "/api/tutor/grade", handleTutorGrade],
@@ -50,7 +63,7 @@ const server = createServer(async (req, res) => {
 
     // Every handler is awaited. Returning an un-awaited promise from this try block
     // would let rejections escape as unhandledRejection and kill the process.
-    if (route) return await route[2](req, res);
+    if (route) return await route[2](req, res, url);
     if (req.method === "GET") return await serveStatic(url.pathname, res);
 
     sendJson(res, 405, { error: "Method not allowed" });
@@ -77,10 +90,171 @@ function listenWithFallback(nextPort, attempts = 0) {
 
   server.listen(nextPort, () => {
     console.log(`VLearn slide AI tutor running at http://localhost:${nextPort}`);
+    console.log(`Lessons loaded: ${lessons.map((l) => `${l.id} (${l.kind}, ${l.pages.length}p)`).join(", ")}`);
     if (!process.env.GEMINI_API_KEY) {
       console.warn("GEMINI_API_KEY is not set — tutor and quiz calls will return 503.");
     }
   });
+}
+
+/* ── Lesson registry ────────────────────────────────────────────────── */
+
+async function buildLessonRegistry() {
+  const list = [];
+
+  list.push(
+    await buildPdfLesson({
+      id: "d1-ai-llm-foundation",
+      title: "Day 1 — AI & LLM Foundation",
+      pdfFile: join(rootDir, "Slide", "d1-slide-hackathon.pdf"),
+      baseQuestionsFile: join(rootDir, "codebase", "lesson", "d1-quiz-mock.json"),
+    })
+  );
+
+  list.push(
+    buildMockLesson({
+      id: "day06-ai-product-method",
+      file: join(rootDir, "codebase", "lesson", "day06-ai-product.json"),
+    })
+  );
+
+  return list;
+}
+
+// Renders the main slide area from the real PDF (canvas, in the browser) and grounds
+// the tutor in real text extracted from that same PDF (server-side, here). No more
+// hand-authored page content and no more guessed page-marker placeholders.
+async function buildPdfLesson({ id, title, pdfFile, baseQuestionsFile }) {
+  const pdfjsLib = await loadPdfjsForNode();
+  const data = new Uint8Array(await readFile(pdfFile));
+  const doc = await pdfjsLib.getDocument({
+    data,
+    disableWorker: true,
+    isEvalSupported: false,
+    useWorkerFetch: false,
+  }).promise;
+
+  const pages = [];
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
+    const page = await doc.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .filter((item) => !isWatermarkText(item.str))
+      .map((item) => item.str || "")
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    pages.push({ pageNumber, text: pageText });
+  }
+
+  const quizFile = JSON.parse(readFileSync(baseQuestionsFile, "utf8"));
+  const baseQuestions = quizFile.questions.map((question) => ({
+    ...question,
+    // pageNumber in the source file is pre-verified against this same PDF's real
+    // text (see codebase/lesson/d1-quiz-mock.json pageNumberNote) — trusted as-is.
+  }));
+
+  return {
+    id,
+    title,
+    kind: "pdf",
+    isMock: false,
+    sourceFile: relative(rootDir, pdfFile).replace(/\\/g, "/"),
+    pdfUrl: `/api/pdf?id=${id}`,
+    pdfFilePath: pdfFile, // server-only, stripped before sending to the client
+    totalPagesInRealDeck: pages.length,
+    pages,
+    baseQuestions,
+  };
+}
+
+// Every page of the Day 1 deck carries a diagonal "AI IN ACTION - HACKATHON"
+// watermark as real (selectable) PDF text. It must never leak into grounding text,
+// citations, or the drag-to-highlight geometry — hardcoded filter, not a guess.
+function isWatermarkText(str) {
+  const normalized = String(str || "").replace(/\s+/g, "").toUpperCase();
+  return normalized.length > 0 && (normalized === "AIINACTION-HACKATHON" || normalized.includes("HACKATHON"));
+}
+
+function buildMockLesson({ id, file }) {
+  const raw = JSON.parse(readFileSync(file, "utf8"));
+  return { ...raw, id: raw.id || id, kind: "mock" };
+}
+
+function loadPdfjsForNode() {
+  if (!pdfjsNodeModulePromise) {
+    installNodeDomPolyfills();
+    pdfjsNodeModulePromise = import("./server-vendor/pdfjs/pdf.mjs");
+  }
+  return pdfjsNodeModulePromise;
+}
+
+// Node has no DOMMatrix/Path2D. These are only accurate enough for TEXT
+// EXTRACTION (getTextContent) — page.render() is never called server-side;
+// all rendering happens in the browser build instead. See
+// codebase/server-vendor/pdfjs/VENDORED.md.
+function installNodeDomPolyfills() {
+  if (globalThis.DOMMatrix) return;
+
+  class DOMMatrixPolyfill {
+    constructor(init) {
+      if (Array.isArray(init) && init.length === 6) {
+        [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+      } else {
+        this.a = 1;
+        this.b = 0;
+        this.c = 0;
+        this.d = 1;
+        this.e = 0;
+        this.f = 0;
+      }
+    }
+    multiply(other) {
+      const m = new DOMMatrixPolyfill();
+      m.a = this.a * other.a + this.c * other.b;
+      m.b = this.b * other.a + this.d * other.b;
+      m.c = this.a * other.c + this.c * other.d;
+      m.d = this.b * other.c + this.d * other.d;
+      m.e = this.a * other.e + this.c * other.f + this.e;
+      m.f = this.b * other.e + this.d * other.f + this.f;
+      return m;
+    }
+    translate(x, y) {
+      return this.multiply(new DOMMatrixPolyfill([1, 0, 0, 1, x, y]));
+    }
+    scale(x, y = x) {
+      return this.multiply(new DOMMatrixPolyfill([x, 0, 0, y, 0, 0]));
+    }
+    inverse() {
+      const det = this.a * this.d - this.b * this.c;
+      return new DOMMatrixPolyfill([
+        this.d / det,
+        -this.b / det,
+        -this.c / det,
+        this.a / det,
+        (this.c * this.f - this.d * this.e) / det,
+        (this.b * this.e - this.a * this.f) / det,
+      ]);
+    }
+  }
+  globalThis.DOMMatrix = DOMMatrixPolyfill;
+
+  class Path2DPolyfill {
+    moveTo() {}
+    lineTo() {}
+    closePath() {}
+    rect() {}
+  }
+  globalThis.Path2D = Path2DPolyfill;
+}
+
+function getLesson(id) {
+  return lessonsById.get(id) || lessonsById.get(DEFAULT_LESSON_ID);
+}
+
+function publicLesson(entry) {
+  const { pdfFilePath, ...rest } = entry;
+  return rest;
 }
 
 /* ── Routes ─────────────────────────────────────────────────────────── */
@@ -90,13 +264,45 @@ function handleHealth(req, res) {
     ok: true,
     model: getGeminiModel(),
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
-    lessonId: lesson.id,
+    defaultLessonId: DEFAULT_LESSON_ID,
+    lessonIds: lessons.map((entry) => entry.id),
     retrievalTopK: RETRIEVAL_TOP_K,
   });
 }
 
-function handleLesson(req, res) {
-  sendJson(res, 200, lesson);
+function handleLessons(req, res) {
+  sendJson(
+    res,
+    200,
+    lessons.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      kind: entry.kind,
+      isMock: Boolean(entry.isMock),
+      pageCount: entry.pages.length,
+    }))
+  );
+}
+
+function handleLesson(req, res, url) {
+  const id = url.searchParams.get("id") || DEFAULT_LESSON_ID;
+  const entry = lessonsById.get(id);
+  if (!entry) return sendJson(res, 404, { error: `Unknown lesson id: ${id}` });
+  sendJson(res, 200, publicLesson(entry));
+}
+
+async function handlePdf(req, res, url) {
+  const id = url.searchParams.get("id") || DEFAULT_LESSON_ID;
+  const entry = lessonsById.get(id);
+  if (!entry || entry.kind !== "pdf") return sendJson(res, 404, { error: `No PDF for lesson id: ${id}` });
+
+  const content = await readFile(entry.pdfFilePath);
+  res.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Length": content.length,
+    "Cache-Control": "public, max-age=3600",
+  });
+  res.end(content);
 }
 
 async function handleTutorAnswer(req, res) {
@@ -104,10 +310,11 @@ async function handleTutorAnswer(req, res) {
   const question = text(body.question);
   if (!question) return sendJson(res, 400, { error: "Question is required" });
 
+  const lesson = getLesson(text(body.lessonId));
   const selectedText = text(body.selectedText);
   const selectedRegion = body.selectedRegion || null;
   const pinnedPage = Number(body.pageNumber) || 0;
-  const retrieved = retrievePages(question, selectedText, pinnedPage);
+  const retrieved = retrievePages(lesson, question, selectedText, pinnedPage);
 
   const json = await callGeminiJson(buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }));
   sendJson(res, 200, normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRegion }));
@@ -118,6 +325,7 @@ async function handleTutorQuiz(req, res) {
   const sourceAnswer = text(body.sourceAnswer);
   if (!sourceAnswer) return sendJson(res, 400, { error: "Source answer is required" });
 
+  const lesson = getLesson(text(body.lessonId));
   const count = clamp(Number(body.questionCount) || 2, 1, 3);
   const pageNumber = Number(body.pageNumber) || 0;
   const page = lesson.pages.find((item) => item.pageNumber === pageNumber) || lesson.pages[0];
@@ -153,7 +361,7 @@ async function handleEvents(req, res) {
   const events = Array.isArray(body.events) ? body.events : [body];
   const stamped = events
     .filter((event) => event && typeof event === "object")
-    .map((event) => ({ ...event, receivedAt: new Date().toISOString(), lessonId: lesson.id }));
+    .map((event) => ({ ...event, receivedAt: new Date().toISOString() }));
 
   if (stamped.length === 0) return sendJson(res, 400, { error: "No events supplied" });
 
@@ -164,10 +372,10 @@ async function handleEvents(req, res) {
 
 /* ── Retrieval ──────────────────────────────────────────────────────── */
 
-// Naive lexical retrieval: good enough to prove the citation contract on a small
-// deck, and it keeps the "only cite what was retrieved" rule enforceable.
-// A 37-page deck would need real chunking + embeddings — see codebase/MOCKS.md.
-function retrievePages(question, selectedText, pinnedPage) {
+// Naive lexical retrieval: good enough to prove the citation contract, and it keeps
+// the "only cite what was retrieved" rule enforceable. A larger deck would need real
+// chunking + embeddings — see codebase/MOCKS.md.
+function retrievePages(lesson, question, selectedText, pinnedPage) {
   const query = tokenize(`${question} ${selectedText}`);
   const ranked = lesson.pages
     .map((page) => ({ page, score: overlap(query, tokenize(pageCorpus(page))) }))
@@ -183,8 +391,11 @@ function retrievePages(question, selectedText, pinnedPage) {
   return picked.sort((a, b) => a.pageNumber - b.pageNumber);
 }
 
+// Mock lessons carry title/points/visual; PDF lessons carry only extracted text.
+// Support both shapes so retrieval works identically either way.
 function pageCorpus(page) {
-  return `${page.title}. ${page.text} ${page.points.join(" ")}`;
+  if (page.title) return `${page.title}. ${page.text} ${(page.points || []).join(" ")}`;
+  return page.text || "";
 }
 
 function tokenize(value) {
@@ -221,7 +432,7 @@ function buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }
     `6. "citation.quote" MUST be copied verbatim from that page's text below — do not paraphrase it.`,
     "",
     "LESSON PAGES (the only source of truth):",
-    ...retrieved.map((page) => `--- Page ${page.pageNumber}: ${page.title}\n${pageCorpus(page)}`),
+    ...retrieved.map((page) => `--- Page ${page.pageNumber}\n${pageCorpus(page)}`),
     "",
     `Learner selected text: ${selectedText || "(none)"}`,
     regionLine,
@@ -243,7 +454,7 @@ function buildQuizPrompt({ sourceAnswer, count, page }) {
     "4. short_answer: supply a concise referenceAnswer instead of options.",
     "5. Keep every explanation under 2 sentences. Do not repeat the same fact twice.",
     "",
-    `Lesson page ${page.pageNumber} — ${page.title}:`,
+    `Lesson page ${page.pageNumber}:`,
     pageCorpus(page),
     "",
     `Tutor answer to verify: ${sourceAnswer}`,
@@ -398,7 +609,8 @@ async function callGeminiJson(prompt) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.error?.message || `Gemini request failed with ${response.status}`);
+    const message = data.error?.message || `Gemini request failed with ${response.status}`;
+    const error = new Error(message);
     error.status = response.status === 429 ? 429 : 502;
     throw error;
   }
@@ -433,7 +645,11 @@ async function serveStatic(pathname, res) {
     throw error;
   }
 
-  res.writeHead(200, { "Content-Type": mimeTypes[extname(filePath)] || "application/octet-stream" });
+  const headers = { "Content-Type": mimeTypes[extname(filePath)] || "application/octet-stream" };
+  // Vendored libraries are content-stable and large — cache them. App code changes
+  // constantly during development, so it must never be served stale from cache.
+  headers["Cache-Control"] = pathname.startsWith("/vendor/") ? "public, max-age=86400" : "no-store";
+  res.writeHead(200, headers);
   res.end(content);
 }
 

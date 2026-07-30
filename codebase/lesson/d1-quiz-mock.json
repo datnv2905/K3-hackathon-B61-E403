@@ -4,12 +4,12 @@
   "source": "Slide/d1-slide-hackathon.md",
   "authoring": "mock",
   "authoringNote": "10 câu soạn tay từ nội dung Day 1, KHÔNG do AI sinh. Dùng làm bộ câu hỏi nền (Phần A) hoặc để test luồng quiz tổng hợp.",
-  "pageNumberNote": "Bản markdown là output OCR từ PDF và không có mốc số trang, nên pageNumber = 0 ở mọi câu. Truy vết bằng sourceHeading thay vì số trang — không bịa số trang.",
+  "pageNumberNote": "pageNumber được xác nhận bằng cách trích xuất text-layer thật từ Slide/d1-slide-hackathon.pdf (qua pdf.js, server-side) và so khớp với sourceHeading — không phải đoán từ markdown OCR. 9/10 câu khớp gần như tuyệt đối (token-overlap ≥0.9). Riêng d1-04: số liệu ví dụ (9 từ/11 token, 10 từ/19 token) chỉ tồn tại dưới dạng ẢNH trên trang 13, không có trong text-layer của PDF — pageNumber=13 xác nhận bằng cách đọc thủ công nội dung trang, không phải qua khớp text tự động. Vì vậy khi tutor cite trang 13 cho câu hỏi loại này, quoteVerified có thể = false một cách hợp lý (không phải lỗi).",
   "questions": [
     {
       "id": "d1-01",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 3,
       "sourceHeading": "AI, ML, Deep Learning, GenAI, LLM — nằm ở đâu trong cùng một hệ?",
       "prompt": "Xếp từ rộng đến hẹp, thành phần nào nằm ở trong cùng?",
       "options": [
@@ -24,7 +24,7 @@
     {
       "id": "d1-02",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 4,
       "sourceHeading": "Ba nhóm AI chính: phân loại · sinh nội dung · hành động",
       "prompt": "Hệ thống “nhận một mục tiêu rồi tự lập kế hoạch, dùng công cụ và hành động nhiều bước” thuộc nhóm nào?",
       "options": [
@@ -38,7 +38,7 @@
     {
       "id": "d1-03",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 10,
       "sourceHeading": "LLM là gì? — một bộ não nền, không phải một chatbot",
       "prompt": "Về bản chất, LLM được luyện để làm việc gì?",
       "options": [
@@ -52,7 +52,7 @@
     {
       "id": "d1-04",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 13,
       "sourceHeading": "Minh hoạ bằng tokenizer thật: tiktoken cl100k_base (GPT-4)",
       "prompt": "Câu tiếng Anh 9 từ ra 11 token, câu tiếng Việt 10 từ ra 19 token. Điểm quan trọng cần rút ra là gì?",
       "options": [
@@ -66,7 +66,7 @@
     {
       "id": "d1-05",
       "type": "short_answer",
-      "pageNumber": 0,
+      "pageNumber": 16,
       "sourceHeading": "Hiểu attention để dùng AI hiệu quả: quản context = quản sự chú ý",
       "prompt": "Hiện tượng “Lost in the Middle” là gì, và nó dẫn tới lời khuyên thực hành nào khi viết prompt?",
       "referenceAnswer": "Thông tin đặt ở giữa ngữ cảnh dễ bị model bỏ sót nhất, còn đầu và cuối prompt được chú ý nhiều nhất. Vì vậy nên đặt yêu cầu quan trọng ở đầu hoặc cuối prompt, đừng chôn nó ở giữa.",
@@ -75,7 +75,7 @@
     {
       "id": "d1-06",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 15,
       "sourceHeading": "Attention: mỗi từ được “nhìn sang” những từ quan trọng khác",
       "prompt": "Cơ chế attention cho phép mỗi token làm gì?",
       "options": [
@@ -89,7 +89,7 @@
     {
       "id": "d1-07",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 18,
       "sourceHeading": "Một LLM được “nuôi lớn” qua 3 bước",
       "prompt": "Ba bước huấn luyện một LLM diễn ra theo thứ tự nào?",
       "options": [
@@ -103,7 +103,7 @@
     {
       "id": "d1-08",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 22,
       "sourceHeading": "Chain-of-Thought: chỉ thêm \"giấy nháp\", từ sai thành đúng",
       "prompt": "“Có 5 quả bóng tennis. Mua thêm 2 hộp, mỗi hộp 3 quả. Tổng cộng bao nhiêu quả?” Đáp án đúng và bài học từ ví dụ này là gì?",
       "options": [
@@ -117,7 +117,7 @@
     {
       "id": "d1-09",
       "type": "mcq",
-      "pageNumber": 0,
+      "pageNumber": 23,
       "sourceHeading": "Từ LLM đến agent: bốn mức độ",
       "prompt": "So với Level 0 (LLM trần), Level 1 thêm năng lực gì?",
       "options": [
@@ -131,7 +131,7 @@
     {
       "id": "d1-10",
       "type": "short_answer",
-      "pageNumber": 0,
+      "pageNumber": 27,
       "sourceHeading": "Token có giá: vé vào rẻ, vé ra đắt gấp 3–5 lần",
       "prompt": "Vì sao output token đắt hơn input token, và núm vặn nào giúp kiểm soát chi phí mỗi lần gọi API tốt nhất?",
       "referenceAnswer": "Input là chữ mình gửi đi nên model chỉ cần đọc, còn output là chữ model phải tự sinh từng mảnh một nên vừa chậm vừa tốn — giá output thường đắt gấp 3 đến 5 lần input. Núm vặn lớn nhất là kiểm soát độ dài output; nên đọc mục usage trong response để theo dõi chi phí.",

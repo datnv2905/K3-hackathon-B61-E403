@@ -1,6 +1,9 @@
-const STORAGE_KEY = "vlearn-tutor-session-v1";
+const STORAGE_PREFIX = "vlearn-tutor-session-v1";
 const MAX_PERSONALISED = 5;
 const DUPLICATE_THRESHOLD = 0.7;
+const PDFJS_MODULE_URL = "/vendor/pdfjs/pdf.min.mjs";
+const PDFJS_WORKER_URL = "/vendor/pdfjs/pdf.worker.min.mjs";
+const PDF_RENDER_ROOT_MARGIN = "1200px 0px"; // render pages ~1.5 screens before they're visible
 
 const RATING_REASONS = [
   "Không liên quan đến nội dung vừa hỏi",
@@ -13,14 +16,13 @@ const RATING_REASONS = [
 ];
 
 const els = {
+  lessonList: document.querySelector("#lessonList"),
   viewer: document.querySelector("#viewer"),
   chat: document.querySelector("#chat"),
   contextPreview: document.querySelector("#contextPreview"),
   askForm: document.querySelector("#askForm"),
   askBtn: document.querySelector("#askBtn"),
   questionInput: document.querySelector("#questionInput"),
-  textModeBtn: document.querySelector("#textModeBtn"),
-  regionModeBtn: document.querySelector("#regionModeBtn"),
   clearSelectionBtn: document.querySelector("#clearSelectionBtn"),
   resetSessionBtn: document.querySelector("#resetSessionBtn"),
   finalQuizBtn: document.querySelector("#finalQuizBtn"),
@@ -39,38 +41,97 @@ const els = {
 };
 
 let lesson = null;
-let state = loadState();
+let lessons = [];
+let state = null;
 let selection = null;
-let mode = "text";
 let drag = null;
 let busy = false;
+
+// PDF-mode-only state. pageTextItems maps pageNumber -> [{str,left,top,width,height}]
+// in CSS-pixel coordinates relative to that page's own rendered canvas, used for the
+// drag-to-select geometry hit-test (see "Highlight without a native text layer" below).
+let pdfDoc = null;
+let pdfjsLib = null;
+let pageTextItems = new Map();
+let pageObserver = null;
 
 init();
 
 async function init() {
   bindEvents();
-  await Promise.all([loadLesson(), loadHealth()]);
+  await loadLessonList();
+  const startLessonId = localStorage.getItem("vlearn-active-lesson") || lessons[0]?.id;
+  await Promise.all([loadLesson(startLessonId), loadHealth()]);
   renderChat();
   renderSummary();
 }
 
 /* ── Loading ─────────────────────────────────────────────── */
 
-async function loadLesson() {
+async function loadLessonList() {
   try {
-    const response = await fetch("/api/lesson");
+    const response = await fetch("/api/lessons");
+    lessons = await response.json();
+  } catch {
+    lessons = [];
+  }
+  renderLessonList(null);
+}
+
+function renderLessonList(activeLessonId) {
+  els.lessonList.innerHTML = "";
+  lessons.forEach((entry) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lesson-item" + (entry.id === activeLessonId ? " is-active" : "");
+    button.innerHTML = `
+      <span>${entry.kind === "pdf" ? "PDF" : "MOCK"} · ${entry.pageCount}tr</span>
+      <strong>${escapeHtml(entry.title)}</strong>
+    `;
+    button.addEventListener("click", () => {
+      if (entry.id !== lesson?.id) switchLesson(entry.id);
+    });
+    els.lessonList.appendChild(button);
+  });
+}
+
+async function switchLesson(id) {
+  if (busy) return;
+  cleanupPdfViewer();
+  els.finalOverlay.hidden = true;
+  localStorage.setItem("vlearn-active-lesson", id);
+  await loadLesson(id);
+  renderChat();
+  renderSummary();
+  trackEvent("lesson_switched", { lessonId: id });
+}
+
+async function loadLesson(id) {
+  try {
+    const response = await fetch(`/api/lesson?id=${encodeURIComponent(id || "")}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     lesson = await response.json();
   } catch {
     els.viewer.innerHTML = `<p class="hint">Không tải được bài giảng. Kiểm tra server đang chạy chưa.</p>`;
     return;
   }
 
+  state = loadState(lesson.id);
+  selection = null;
+
   els.lessonTitle.textContent = lesson.title;
   els.lessonNavTitle.textContent = lesson.title;
   els.lessonFileName.textContent = lesson.sourceFile;
   els.mockBadge.hidden = !lesson.isMock;
   if (lesson.isMock) els.mockBadge.title = lesson.mockNote || "";
-  renderSlides();
+  renderLessonList(lesson.id);
+  renderSelection();
+
+  if (lesson.kind === "pdf") {
+    await renderPdfSlides();
+  } else {
+    renderSlides();
+  }
 }
 
 async function loadHealth() {
@@ -89,22 +150,11 @@ async function loadHealth() {
 
 function bindEvents() {
   els.askForm.addEventListener("submit", askTutor);
-  els.textModeBtn.addEventListener("click", () => setMode("text"));
-  els.regionModeBtn.addEventListener("click", () => setMode("region"));
   els.clearSelectionBtn.addEventListener("click", clearSelection);
   els.resetSessionBtn.addEventListener("click", resetSession);
   els.finalQuizBtn.addEventListener("click", openFinalQuiz);
   els.closeFinalBtn.addEventListener("click", () => (els.finalOverlay.hidden = true));
   els.viewer.addEventListener("pointerup", captureTextSelection);
-}
-
-function setMode(next) {
-  mode = next;
-  els.textModeBtn.classList.toggle("is-active", mode === "text");
-  els.regionModeBtn.classList.toggle("is-active", mode === "region");
-  els.textModeBtn.setAttribute("aria-pressed", String(mode === "text"));
-  els.regionModeBtn.setAttribute("aria-pressed", String(mode === "region"));
-  document.body.classList.toggle("is-region-mode", mode === "region");
 }
 
 /* ── Slide viewer ────────────────────────────────────────── */
@@ -133,18 +183,281 @@ function renderSlides() {
       </div>
     `;
 
-    body.addEventListener("pointerdown", startRegion);
-    body.addEventListener("pointermove", moveRegion);
-    body.addEventListener("pointerup", endRegion);
-    body.addEventListener("pointercancel", cancelRegion);
-
     slide.append(meta, body);
     els.viewer.appendChild(slide);
   });
 }
 
+/* ── PDF viewer ──────────────────────────────────────────── */
+//
+// Renders the real PDF (pdf.js, vendored — see codebase/public/vendor/pdfjs)
+// straight to <canvas>, one per page, lazily as pages scroll into view.
+//
+// Highlight without a native text layer: instead of pdf.js's TextLayer class
+// (browser-native, cursor-based text selection with real DOM text nodes), the
+// learner drags a box over the page and we hit-test that box against each text
+// item's own geometry (computed from pdf.js's glyph transforms — see
+// geometryForItem), then send the underlying real string to the tutor. There is
+// no region (khoanh vùng) mode anywhere in the app — highlighting is the only
+// interaction. This trades native OS text selection for a much smaller, more reliable
+// implementation — see codebase/MOCKS.md.
+
+async function getPdfjsLib() {
+  if (!pdfjsLib) {
+    pdfjsLib = await import(PDFJS_MODULE_URL);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  }
+  return pdfjsLib;
+}
+
+async function renderPdfSlides() {
+  cleanupPdfViewer();
+  els.viewer.innerHTML = "";
+
+  let lib;
+  try {
+    lib = await getPdfjsLib();
+    // A dedicated Worker for a ~1.2MB module script was hanging after the first
+    // message in testing (page 1 would render, then everything after it stalled
+    // forever). Running pdf.js on the main thread is slightly less smooth for a
+    // 29-page deck but is reliable — and rendering is already serialized to one
+    // page at a time (see drainPdfRenderQueue), so it never blocks for long.
+    pdfDoc = await lib.getDocument({ url: lesson.pdfUrl, disableWorker: true }).promise;
+  } catch (error) {
+    els.viewer.innerHTML = `<p class="hint">Không tải được PDF: ${escapeHtml(error.message)}</p>`;
+    return;
+  }
+
+  pageObserver = new IntersectionObserver(onPageIntersect, {
+    root: els.viewer,
+    rootMargin: PDF_RENDER_ROOT_MARGIN,
+  });
+
+  for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber++) {
+    const page = await pdfDoc.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+
+    const slide = document.createElement("article");
+    slide.className = "slide pdf-slide";
+    slide.dataset.page = String(pageNumber);
+
+    const meta = document.createElement("div");
+    meta.className = "slide-meta";
+    meta.innerHTML = `<span>Trang ${pageNumber} / ${pdfDoc.numPages}</span><span>${escapeHtml(lesson.sourceFile)}</span>`;
+
+    const body = document.createElement("div");
+    body.className = "slide-body pdf-page-body is-loading";
+    body.dataset.page = String(pageNumber);
+    body.dataset.rendered = "false";
+    // Reserve the final on-screen size up front so pages above don't jump around
+    // as later pages finish loading.
+    const targetWidth = Math.min(els.viewer.clientWidth - 4 || 760, 900);
+    const scale = targetWidth / baseViewport.width;
+    body.style.width = `${Math.floor(targetWidth)}px`;
+    body.style.height = `${Math.floor(baseViewport.height * scale)}px`;
+    body.dataset.scale = String(scale);
+
+    slide.append(meta, body);
+    els.viewer.appendChild(slide);
+    pageObserver.observe(body);
+  }
+}
+
+// Rendering a PDF page (rasterizing vector content + any embedded images at
+// devicePixelRatio) is heavy enough that a few pages firing at once from a wide
+// IntersectionObserver margin visibly froze the tab. A one-at-a-time queue keeps
+// the UI responsive; the scroll-ahead margin just decides what gets queued early.
+const pdfRenderQueue = [];
+let pdfRenderQueueRunning = false;
+
+function onPageIntersect(entries) {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    const body = entry.target;
+    if (body.dataset.rendered === "true") continue;
+    body.dataset.rendered = "true"; // claim immediately so we never double-queue
+    pageObserver.unobserve(body);
+    pdfRenderQueue.push(body);
+  }
+  if (!pdfRenderQueueRunning) drainPdfRenderQueue();
+}
+
+async function drainPdfRenderQueue() {
+  pdfRenderQueueRunning = true;
+  while (pdfRenderQueue.length > 0) {
+    const body = pdfRenderQueue.shift();
+    // A lesson switch mid-drain (cleanupPdfViewer) detaches the observer but this
+    // queue is module-level, so guard against rendering into a torn-down viewer.
+    if (!pdfDoc || !body.isConnected) continue;
+    try {
+      await renderPdfPage(Number(body.dataset.page), body);
+    } catch (error) {
+      body.classList.remove("is-loading");
+      body.innerHTML = `<p class="hint">Lỗi tải trang: ${escapeHtml(error.message)}</p>`;
+    }
+  }
+  pdfRenderQueueRunning = false;
+}
+
+async function renderPdfPage(pageNumber, body) {
+  const page = await pdfDoc.getPage(pageNumber);
+  const scale = Number(body.dataset.scale);
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const outputScale = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(viewport.width * outputScale);
+  canvas.height = Math.floor(viewport.height * outputScale);
+  canvas.style.width = `${Math.floor(viewport.width)}px`;
+  canvas.style.height = `${Math.floor(viewport.height)}px`;
+  const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+  await page.render({ canvasContext: ctx, transform, viewport }).promise;
+
+  const lib = await getPdfjsLib();
+  const textContent = await page.getTextContent();
+  const items = textContent.items
+    .filter((item) => item.str && item.str.trim() && !isWatermarkText(item.str))
+    .map((item) => geometryForItem(lib, item, viewport));
+  pageTextItems.set(pageNumber, items);
+
+  body.classList.remove("is-loading");
+  body.style.width = `${Math.floor(viewport.width)}px`;
+  body.style.height = `${Math.floor(viewport.height)}px`;
+  body.appendChild(canvas);
+
+  body.addEventListener("pointerdown", startPdfDrag);
+  body.addEventListener("pointermove", movePdfDrag);
+  body.addEventListener("pointerup", endPdfDrag);
+  body.addEventListener("pointercancel", cancelPdfDrag);
+}
+
+// Every page of the Day 1 deck carries a diagonal "AI IN ACTION - HACKATHON"
+// watermark as real (selectable) PDF text. It must never be draggable into a
+// highlight — hardcoded filter, not a guess. Kept in sync with server.js's copy.
+function isWatermarkText(str) {
+  const normalized = String(str || "").replace(/\s+/g, "").toUpperCase();
+  return normalized.length > 0 && (normalized === "AIINACTION-HACKATHON" || normalized.includes("HACKATHON"));
+}
+
+// Approximates each glyph run's on-canvas bounding box from pdf.js's transform
+// matrices. Good enough for a drag-to-select hit-test; not pixel-perfect for
+// rotated or vertical text, which this deck (plain horizontal Vietnamese) doesn't use.
+function geometryForItem(lib, item, viewport) {
+  const tx = lib.Util.transform(viewport.transform, item.transform);
+  const fontHeight = Math.hypot(tx[2], tx[3]) || 1;
+  const scaleMagnitude = Math.hypot(tx[0], tx[1]) || 1;
+  const left = tx[4];
+  const top = tx[5] - fontHeight;
+  const width = Math.abs(item.width * (scaleMagnitude / (Math.hypot(item.transform[0], item.transform[1]) || 1)));
+  return { str: item.str, left, top, width: width || fontHeight, height: fontHeight * 1.15 };
+}
+
+function cleanupPdfViewer() {
+  pageObserver?.disconnect();
+  pageObserver = null;
+  pdfDoc = null;
+  pageTextItems = new Map();
+  pdfRenderQueue.length = 0;
+}
+
+function startPdfDrag(event) {
+  const body = event.currentTarget;
+  const rect = body.getBoundingClientRect();
+
+  body.querySelectorAll(".drag-box").forEach((box) => box.remove());
+  const box = document.createElement("div");
+  box.className = "drag-box";
+  body.appendChild(box);
+
+  drag = {
+    body,
+    box,
+    pageNumber: Number(body.dataset.page),
+    startX: event.clientX - rect.left,
+    startY: event.clientY - rect.top,
+  };
+  body.setPointerCapture(event.pointerId);
+  paintRegion(event);
+}
+
+function movePdfDrag(event) {
+  if (drag) paintRegion(event);
+}
+
+function endPdfDrag(event) {
+  if (!drag) return;
+  paintRegion(event);
+
+  const bodyRect = drag.body.getBoundingClientRect();
+  const boxRect = drag.box.getBoundingClientRect();
+  const boxLocal = {
+    left: boxRect.left - bodyRect.left,
+    top: boxRect.top - bodyRect.top,
+    width: boxRect.width,
+    height: boxRect.height,
+  };
+
+  if (boxLocal.width < 8 || boxLocal.height < 8) {
+    drag.box.remove();
+    releaseDrag(event);
+    return;
+  }
+
+  // Every drag on a PDF page highlights a passage — there is no region mode.
+  selectTextInBox(drag.pageNumber, boxLocal, drag.body);
+  releaseDrag(event);
+}
+
+function cancelPdfDrag(event) {
+  if (drag) {
+    drag.box.remove();
+    releaseDrag(event);
+  }
+}
+
+function selectTextInBox(pageNumber, box, body) {
+  const items = pageTextItems.get(pageNumber) || [];
+  const boxRight = box.left + box.width;
+  const boxBottom = box.top + box.height;
+
+  const matched = items.filter((item) => {
+    const itemRight = item.left + item.width;
+    const itemBottom = item.top + item.height;
+    return item.left < boxRight && itemRight > box.left && item.top < boxBottom && itemBottom > box.top;
+  });
+
+  body.querySelectorAll(".drag-box, .text-highlight-box").forEach((el) => el.remove());
+
+  if (matched.length === 0) {
+    selection = null;
+    renderSelection();
+    return;
+  }
+
+  matched.forEach((item) => {
+    const highlight = document.createElement("div");
+    highlight.className = "text-highlight-box";
+    Object.assign(highlight.style, {
+      left: `${item.left}px`,
+      top: `${item.top}px`,
+      width: `${item.width}px`,
+      height: `${item.height}px`,
+    });
+    body.appendChild(highlight);
+  });
+
+  const text = matched.map((item) => item.str).join(" ").replace(/\s+/g, " ").trim();
+  selection = { id: crypto.randomUUID(), type: "text", pageNumber, text };
+  renderSelection();
+  trackEvent("selection_text", { pageNumber, length: text.length, viaDrag: true });
+}
+
+/* ── Mock-lesson viewer (fabricated card content — see codebase/MOCKS.md) ── */
+
 function captureTextSelection() {
-  if (mode !== "text") return;
+  if (lesson?.kind === "pdf") return; // PDF pages use the drag-to-highlight path instead
   const picked = window.getSelection();
   const value = picked?.toString().trim();
   if (!value) return;
@@ -161,70 +474,6 @@ function captureTextSelection() {
   };
   renderSelection();
   trackEvent("selection_text", { pageNumber: selection.pageNumber, length: value.length });
-}
-
-function startRegion(event) {
-  if (mode !== "region") return;
-  const body = event.currentTarget;
-  const rect = body.getBoundingClientRect();
-
-  body.querySelectorAll(".region-box").forEach((box) => box.remove());
-  const box = document.createElement("div");
-  box.className = "region-box";
-  body.appendChild(box);
-
-  drag = {
-    body,
-    box,
-    pageNumber: Number(body.closest(".slide").dataset.page),
-    startX: event.clientX - rect.left,
-    startY: event.clientY - rect.top,
-  };
-  body.setPointerCapture(event.pointerId);
-  paintRegion(event);
-}
-
-function moveRegion(event) {
-  if (drag) paintRegion(event);
-}
-
-function endRegion(event) {
-  if (!drag) return;
-  paintRegion(event);
-
-  const bodyRect = drag.body.getBoundingClientRect();
-  const boxRect = drag.box.getBoundingClientRect();
-  const percent = (value, total) => Math.round((value / total) * 1000) / 10;
-
-  if (boxRect.width < 8 || boxRect.height < 8) {
-    drag.box.remove();
-    releaseDrag(event);
-    return;
-  }
-
-  selection = {
-    id: crypto.randomUUID(),
-    type: "region",
-    pageNumber: drag.pageNumber,
-    region: {
-      pageNumber: drag.pageNumber,
-      x: percent(boxRect.left - bodyRect.left, bodyRect.width),
-      y: percent(boxRect.top - bodyRect.top, bodyRect.height),
-      width: percent(boxRect.width, bodyRect.width),
-      height: percent(boxRect.height, bodyRect.height),
-    },
-  };
-
-  releaseDrag(event);
-  renderSelection();
-  trackEvent("selection_region", { pageNumber: selection.pageNumber, ...selection.region });
-}
-
-function cancelRegion(event) {
-  if (drag) {
-    drag.box.remove();
-    releaseDrag(event);
-  }
 }
 
 function releaseDrag(event) {
@@ -251,7 +500,7 @@ function paintRegion(event) {
 function clearSelection() {
   selection = null;
   window.getSelection()?.removeAllRanges();
-  document.querySelectorAll(".region-box").forEach((box) => box.remove());
+  document.querySelectorAll(".text-highlight-box").forEach((box) => box.remove());
   renderSelection();
 }
 
@@ -260,12 +509,7 @@ function renderSelection() {
     els.contextPreview.textContent = "Chưa chọn nội dung";
     return;
   }
-  if (selection.type === "text") {
-    els.contextPreview.textContent = `Trang ${selection.pageNumber}: “${selection.text}”`;
-    return;
-  }
-  const { x, y, width, height } = selection.region;
-  els.contextPreview.textContent = `Trang ${selection.pageNumber}: vùng đã khoanh — x ${x}%, y ${y}%, rộng ${width}%, cao ${height}%`;
+  els.contextPreview.textContent = `Trang ${selection.pageNumber}: “${selection.text}”`;
 }
 
 /* ── Asking the tutor ────────────────────────────────────── */
@@ -283,15 +527,14 @@ async function askTutor(event) {
   const pending = { id: crypto.randomUUID(), role: "assistant", content: "Đang tra bài giảng…", pending: true };
   state.messages.push(pending);
   renderChat({ scrollToEnd: true });
-  trackEvent("ask_question", { pageNumber, hasSelection: Boolean(selection), selectionType: selection?.type || "none" });
+  trackEvent("ask_question", { pageNumber, hasSelection: Boolean(selection) });
 
   try {
     const data = await postJson("/api/tutor/answer", {
       lessonId: lesson.id,
       pageNumber,
       question,
-      selectedText: selection?.type === "text" ? selection.text : "",
-      selectedRegion: selection?.type === "region" ? selection.region : null,
+      selectedText: selection?.text || "",
     });
 
     replaceMessage(pending.id, {
@@ -358,7 +601,7 @@ function renderChat({ scrollToEnd = false } = {}) {
   const previousScroll = els.chat.scrollTop;
 
   if (state.messages.length === 0) {
-    els.chat.innerHTML = `<p class="hint">Bôi đen một đoạn hoặc khoanh một vùng trên slide, rồi đặt câu hỏi.<br />AI chỉ trả lời từ nội dung bài giảng và luôn kèm trang nguồn.</p>`;
+    els.chat.innerHTML = `<p class="hint">Bôi đen một đoạn trên slide, rồi đặt câu hỏi.<br />AI chỉ trả lời từ nội dung bài giảng và luôn kèm trang nguồn.</p>`;
     return;
   }
 
@@ -952,10 +1195,16 @@ function resetSession() {
   trackEvent("session_reset", {});
 }
 
-function loadState() {
+// Each lesson keeps its own session — switching lessons must not mix pageNumbers
+// or quiz state from a different lesson's content into this one.
+function storageKeyFor(lessonId) {
+  return `${STORAGE_PREFIX}:${lessonId || "default"}`;
+}
+
+function loadState(lessonId) {
   const fallback = { sessionId: crypto.randomUUID(), messages: [], quizzes: [], finalAttempt: null };
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const stored = JSON.parse(localStorage.getItem(storageKeyFor(lessonId)) || "null");
     if (!stored || typeof stored !== "object") return fallback;
     return {
       sessionId: stored.sessionId || fallback.sessionId,
@@ -969,8 +1218,9 @@ function loadState() {
 }
 
 function saveState() {
+  if (!lesson) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(storageKeyFor(lesson.id), JSON.stringify(state));
   } catch {
     /* storage full or blocked — the session still works in memory */
   }

@@ -1,3 +1,5 @@
+import { createSessionChip, requireRole } from "/auth.js";
+
 const STORAGE_PREFIX = "vlearn-tutor-session-v1";
 const MAX_PERSONALISED = 5;
 const DUPLICATE_THRESHOLD = 0.7;
@@ -58,12 +60,21 @@ let pageObserver = null;
 init();
 
 async function init() {
+  // Cổng điều hướng demo: chưa đăng nhập thì về /login.html, admin thì sang dashboard.
+  const session = requireRole("learner");
+  if (!session) return;
+  mountSessionChip(session);
+
   bindEvents();
   await loadLessonList();
   const startLessonId = localStorage.getItem("vlearn-active-lesson") || lessons[0]?.id;
   await Promise.all([loadLesson(startLessonId), loadHealth()]);
   renderChat();
   renderSummary();
+}
+
+function mountSessionChip(session) {
+  document.querySelector(".topbar-right")?.prepend(createSessionChip(session));
 }
 
 /* ── Loading ─────────────────────────────────────────────── */
@@ -217,12 +228,20 @@ async function renderPdfSlides() {
   let lib;
   try {
     lib = await getPdfjsLib();
-    // A dedicated Worker for a ~1.2MB module script was hanging after the first
-    // message in testing (page 1 would render, then everything after it stalled
-    // forever). Running pdf.js on the main thread is slightly less smooth for a
-    // 29-page deck but is reliable — and rendering is already serialized to one
-    // page at a time (see drainPdfRenderQueue), so it never blocks for long.
-    pdfDoc = await lib.getDocument({ url: lesson.pdfUrl, disableWorker: true }).promise;
+    // Uses a real dedicated Worker (pdf.js default), not disableWorker:true.
+    // The main-thread "fake worker" mode used to be the choice here, but it
+    // throws a Safari-only ReferenceError ("Cannot access uninitialized
+    // variable") — a known pdf.js/WebKit module-evaluation incompatibility in
+    // that code path specifically. A prior comment claimed a real Worker hung
+    // after the first page; re-tested via CDP (real console + a full 29-page
+    // scroll-through, not just a screenshot) and it completed cleanly with zero
+    // errors, so that appears to have been fixed upstream since. withTimeout
+    // still guards against a silent stall either way.
+    pdfDoc = await withTimeout(
+      lib.getDocument({ url: lesson.pdfUrl }).promise,
+      20000,
+      "Worker không phản hồi sau 20s"
+    );
   } catch (error) {
     els.viewer.innerHTML = `<p class="hint">Không tải được PDF: ${escapeHtml(error.message)}</p>`;
     return;
@@ -527,7 +546,7 @@ async function askTutor(event) {
   const pending = { id: crypto.randomUUID(), role: "assistant", content: "Đang tra bài giảng…", pending: true };
   state.messages.push(pending);
   renderChat({ scrollToEnd: true });
-  trackEvent("ask_question", { pageNumber, hasSelection: Boolean(selection) });
+  trackEvent("ask_question", { pageNumber, hasSelection: Boolean(selection), question });
 
   try {
     const data = await postJson("/api/tutor/answer", {
@@ -1228,7 +1247,7 @@ function saveState() {
 
 // Fire-and-forget: analytics must never block or break the learner flow.
 function trackEvent(type, payload) {
-  const event = { type, sessionId: state.sessionId, at: new Date().toISOString(), ...payload };
+  const event = { type, sessionId: state.sessionId, lessonId: lesson?.id || null, at: new Date().toISOString(), ...payload };
   fetch("/api/events", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1283,6 +1302,13 @@ function label(text) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
 }
 
 function escapeHtml(value) {

@@ -11,6 +11,13 @@ const preferredPort = Number(process.env.PORT || 3000);
 
 loadEnv(join(rootDir, ".env"));
 
+// Which model provider serves every AI call (tutor answer, quiz, grading, admin
+// smart suggestion). Resolved once at boot so the whole process — health endpoint,
+// boot log, every request — reports the same answer. Default is gemini, so a
+// teammate with only GEMINI_API_KEY set runs exactly as before: no new env var,
+// no new flag, nothing to learn.
+const AI_PROVIDER = resolveProvider();
+
 // Canonical wording for the two refusal paths. The model proposes; the server decides
 // the final text, so a chatty model cannot talk its way past a refusal.
 const INSUFFICIENT_TEXT = "Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng.";
@@ -54,16 +61,26 @@ const routes = [
   ["POST", "/api/tutor/quiz", handleTutorQuiz],
   ["POST", "/api/tutor/grade", handleTutorGrade],
   ["POST", "/api/events", handleEvents],
+  ["GET", "/api/admin/overview", handleAdminOverview],
+  ["GET", "/api/admin/pages/:pageNumber/questions", handleAdminPageQuestions],
+  ["POST", "/api/admin/suggestions", handleAdminSuggestion],
 ];
+
+// pageNumber is a path param, not a literal segment — match it manually alongside
+// the exact-match routes above rather than pulling in a router dependency for one case.
+const ADMIN_PAGE_QUESTIONS_RE = /^\/api\/admin\/pages\/(\d+)\/questions$/;
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const route = routes.find(([method, path]) => method === req.method && path === url.pathname);
 
+    const pageQuestionsMatch = req.method === "GET" && ADMIN_PAGE_QUESTIONS_RE.exec(url.pathname);
+
     // Every handler is awaited. Returning an un-awaited promise from this try block
     // would let rejections escape as unhandledRejection and kill the process.
     if (route) return await route[2](req, res, url);
+    if (pageQuestionsMatch) return await handleAdminPageQuestions(req, res, url, Number(pageQuestionsMatch[1]));
     if (req.method === "GET") return await serveStatic(url.pathname, res);
 
     sendJson(res, 405, { error: "Method not allowed" });
@@ -91,8 +108,11 @@ function listenWithFallback(nextPort, attempts = 0) {
   server.listen(nextPort, () => {
     console.log(`VLearn slide AI tutor running at http://localhost:${nextPort}`);
     console.log(`Lessons loaded: ${lessons.map((l) => `${l.id} (${l.kind}, ${l.pages.length}p)`).join(", ")}`);
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn("GEMINI_API_KEY is not set — tutor and quiz calls will return 503.");
+    console.log(`AI provider: ${AI_PROVIDER} (${getActiveModel()})`);
+    // Only nag about the key this provider actually needs — running with --claude
+    // must not complain about a missing GEMINI_API_KEY, and vice versa.
+    if (!getApiKey()) {
+      console.warn(`${API_KEY_ENV[AI_PROVIDER]} is not set — tutor, quiz and suggestion calls will return 503.`);
     }
   });
 }
@@ -262,7 +282,10 @@ function publicLesson(entry) {
 function handleHealth(req, res) {
   sendJson(res, 200, {
     ok: true,
-    model: getGeminiModel(),
+    provider: AI_PROVIDER,
+    model: getActiveModel(),
+    hasApiKey: Boolean(getApiKey()),
+    // Kept for anything already reading this field.
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     defaultLessonId: DEFAULT_LESSON_ID,
     lessonIds: lessons.map((entry) => entry.id),
@@ -316,7 +339,7 @@ async function handleTutorAnswer(req, res) {
   const pinnedPage = Number(body.pageNumber) || 0;
   const retrieved = retrievePages(lesson, question, selectedText, pinnedPage);
 
-  const json = await callGeminiJson(buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }));
+  const json = await callModelJson(buildAnswerPrompt({ question, selectedText, selectedRegion, retrieved }));
   sendJson(res, 200, normalizeAnswer(json, { retrieved, pinnedPage, selectedText, selectedRegion }));
 }
 
@@ -330,7 +353,7 @@ async function handleTutorQuiz(req, res) {
   const pageNumber = Number(body.pageNumber) || 0;
   const page = lesson.pages.find((item) => item.pageNumber === pageNumber) || lesson.pages[0];
 
-  const json = await callGeminiJson(buildQuizPrompt({ sourceAnswer, count, page }));
+  const json = await callModelJson(buildQuizPrompt({ sourceAnswer, count, page }));
   sendJson(res, 200, normalizeQuiz(json, count, page.pageNumber));
 }
 
@@ -342,7 +365,7 @@ async function handleTutorGrade(req, res) {
     return sendJson(res, 400, { error: "prompt and learnerAnswer are required" });
   }
 
-  const json = await callGeminiJson(buildGradePrompt({
+  const json = await callModelJson(buildGradePrompt({
     questionPrompt,
     learnerAnswer,
     referenceAnswer: text(body.referenceAnswer),
@@ -368,6 +391,310 @@ async function handleEvents(req, res) {
   await mkdir(varDir, { recursive: true });
   await appendFile(eventLogPath, stamped.map((event) => JSON.stringify(event)).join("\n") + "\n", "utf8");
   sendJson(res, 200, { stored: stamped.length });
+}
+
+const MIN_SIGNAL_QUESTIONS = 2;
+const MIN_SIGNAL_HIGHLIGHTS = 2;
+const TOP_COMMON_QUESTIONS = 8;
+
+async function handleAdminOverview(req, res, url) {
+  const lessonId = text(url.searchParams.get("lessonId")) || DEFAULT_LESSON_ID;
+  const lesson = getLesson(lessonId);
+  const events = await readEventsForLesson(lesson.id);
+  sendJson(res, 200, buildOverviewAggregate(lesson, events));
+}
+
+async function handleAdminPageQuestions(req, res, url, pageNumber) {
+  const lessonId = text(url.searchParams.get("lessonId")) || DEFAULT_LESSON_ID;
+  const lesson = getLesson(lessonId);
+  const events = await readEventsForLesson(lesson.id);
+  const questions = collectCommonQuestions(events, pageNumber, Infinity);
+  sendJson(res, 200, { lessonId: lesson.id, pageNumber, questions });
+}
+
+async function handleAdminSuggestion(req, res) {
+  const body = await readJsonBody(req);
+  const lessonId = text(body.lessonId) || DEFAULT_LESSON_ID;
+  const pageNumber = Number(body.pageNumber);
+  if (!Number.isInteger(pageNumber)) return sendJson(res, 400, { error: "pageNumber is required" });
+
+  const lesson = getLesson(lessonId);
+  const events = await readEventsForLesson(lesson.id);
+  const overview = buildOverviewAggregate(lesson, events);
+  const page = overview.pages.find((entry) => entry.pageNumber === pageNumber);
+
+  if (!page) return sendJson(res, 404, { error: `No aggregate for page ${pageNumber}` });
+  if (page.questionCount < MIN_SIGNAL_QUESTIONS && page.highlightCount < MIN_SIGNAL_HIGHLIGHTS) {
+    const error = new Error(
+      `Chưa đủ tín hiệu ở trang ${pageNumber} để tạo smart suggestion (cần ít nhất ${MIN_SIGNAL_QUESTIONS} câu hỏi hoặc ${MIN_SIGNAL_HIGHLIGHTS} lượt bôi đen).`
+    );
+    error.status = 422;
+    throw error;
+  }
+
+  const json = await callModelJson(buildSuggestionPrompt({ lesson, page, overview }));
+  sendJson(res, 200, normalizeSuggestion(json, page, overview));
+}
+
+async function readEventsForLesson(lessonId) {
+  let raw;
+  try {
+    raw = await readFile(eventLogPath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+
+  const events = [];
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line);
+      if (event && event.lessonId === lessonId) events.push(event);
+    } catch {
+      // A malformed line must not take the whole dashboard down.
+    }
+  }
+  return events;
+}
+
+// Single pass: seed one entry per lesson page (so pages with zero activity still
+// show up as rows), then fold every event into its page bucket. quiz_rated and
+// quiz_include_toggled carry only quizId, not pageNumber, so quizId->pageNumber
+// is resolved via the quiz_generated event first.
+function buildOverviewAggregate(lesson, events) {
+  const byPage = new Map(
+    lesson.pages.map((page) => [
+      page.pageNumber,
+      {
+        pageNumber: page.pageNumber,
+        questionCount: 0,
+        highlightCount: 0,
+        microQuizCount: 0,
+        quizAttempts: 0,
+        quizCorrect: 0,
+        ratingUseful: 0,
+        ratingNotUseful: 0,
+        optOutCount: 0,
+        notUsefulReasons: new Map(),
+        questionTexts: new Map(),
+        // sessionId phân biệt đã hỏi hoặc bôi đen trên trang này. Dùng làm
+        // affectedLearners — đếm NGƯỜI, không phải đếm lượt: một người hỏi 10 câu
+        // vẫn là một người, nếu không tỷ lệ trên tổng người học vọt quá 100%.
+        interactedSessions: new Set(),
+      },
+    ])
+  );
+
+  const quizPage = new Map(); // quizId -> pageNumber
+  const quizRating = new Map(); // quizId -> latest "useful" | "not_useful" | "cleared"
+  const quizReason = new Map(); // quizId -> latest not-useful reason
+  const quizIncluded = new Map(); // quizId -> latest includeInFinal (defaults true when generated)
+  const sessionIds = new Set();
+
+  const bucketFor = (pageNumber) => byPage.get(Number(pageNumber));
+
+  for (const event of events) {
+    if (event.sessionId) sessionIds.add(event.sessionId);
+
+    switch (event.type) {
+      case "ask_question": {
+        const bucket = bucketFor(event.pageNumber);
+        if (!bucket) break;
+        bucket.questionCount += 1;
+        if (event.sessionId) bucket.interactedSessions.add(event.sessionId);
+        const q = text(event.question);
+        if (q) bucket.questionTexts.set(q, (bucket.questionTexts.get(q) || 0) + 1);
+        break;
+      }
+      case "selection_text": {
+        const bucket = bucketFor(event.pageNumber);
+        if (!bucket) break;
+        bucket.highlightCount += 1;
+        if (event.sessionId) bucket.interactedSessions.add(event.sessionId);
+        break;
+      }
+      case "quiz_generated": {
+        if (event.quizId) quizPage.set(event.quizId, Number(event.pageNumber));
+        quizIncluded.set(event.quizId, true);
+        const bucket = bucketFor(event.pageNumber);
+        if (bucket) bucket.microQuizCount += 1;
+        break;
+      }
+      case "quiz_answered": {
+        const bucket = bucketFor(event.pageNumber);
+        if (!bucket) break;
+        bucket.quizAttempts += 1;
+        if (event.isCorrect) bucket.quizCorrect += 1;
+        break;
+      }
+      case "quiz_rated": {
+        if (event.quizId) {
+          quizRating.set(event.quizId, event.rating);
+          quizReason.set(event.quizId, text(event.reason));
+        }
+        break;
+      }
+      case "quiz_include_toggled": {
+        if (event.quizId) quizIncluded.set(event.quizId, Boolean(event.includeInFinal));
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  for (const [quizId, rating] of quizRating.entries()) {
+    const bucket = bucketFor(quizPage.get(quizId));
+    if (!bucket) continue;
+    if (rating === "useful") bucket.ratingUseful += 1;
+    else if (rating === "not_useful") {
+      bucket.ratingNotUseful += 1;
+      const reason = quizReason.get(quizId);
+      if (reason) bucket.notUsefulReasons.set(reason, (bucket.notUsefulReasons.get(reason) || 0) + 1);
+    }
+  }
+
+  for (const [quizId, included] of quizIncluded.entries()) {
+    if (included) continue;
+    const bucket = bucketFor(quizPage.get(quizId));
+    if (bucket) bucket.optOutCount += 1;
+  }
+
+  const pages = [...byPage.values()]
+    .sort((a, b) => a.pageNumber - b.pageNumber)
+    .map((bucket) => ({
+      pageNumber: bucket.pageNumber,
+      questionCount: bucket.questionCount,
+      highlightCount: bucket.highlightCount,
+      microQuizCount: bucket.microQuizCount,
+      quizAttempts: bucket.quizAttempts,
+      quizCorrect: bucket.quizCorrect,
+      ratingUseful: bucket.ratingUseful,
+      ratingNotUseful: bucket.ratingNotUseful,
+      optOutCount: bucket.optOutCount,
+      affectedLearners: bucket.interactedSessions.size,
+      notUsefulReasons: [...bucket.notUsefulReasons.entries()]
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count),
+      commonQuestions: [...bucket.questionTexts.entries()]
+        .map(([question, count]) => ({ text: question, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, TOP_COMMON_QUESTIONS),
+    }));
+
+  const totals = pages.reduce(
+    (acc, page) => ({
+      totalQuestions: acc.totalQuestions + page.questionCount,
+      totalHighlights: acc.totalHighlights + page.highlightCount,
+      totalMicroQuizzes: acc.totalMicroQuizzes + page.microQuizCount,
+      quizAttempts: acc.quizAttempts + page.quizAttempts,
+      quizCorrect: acc.quizCorrect + page.quizCorrect,
+      ratingUseful: acc.ratingUseful + page.ratingUseful,
+      ratingNotUseful: acc.ratingNotUseful + page.ratingNotUseful,
+      optOutCount: acc.optOutCount + page.optOutCount,
+    }),
+    {
+      totalQuestions: 0,
+      totalHighlights: 0,
+      totalMicroQuizzes: 0,
+      quizAttempts: 0,
+      quizCorrect: 0,
+      ratingUseful: 0,
+      ratingNotUseful: 0,
+      optOutCount: 0,
+    }
+  );
+
+  const ratedTotal = totals.ratingUseful + totals.ratingNotUseful;
+
+  return {
+    lessonId: lesson.id,
+    totalLearners: sessionIds.size,
+    totalQuestions: totals.totalQuestions,
+    totalHighlights: totals.totalHighlights,
+    totalMicroQuizzes: totals.totalMicroQuizzes,
+    quizAccuracy: totals.quizAttempts > 0 ? totals.quizCorrect / totals.quizAttempts : 0,
+    ratingUsefulRate: ratedTotal > 0 ? totals.ratingUseful / ratedTotal : 0,
+    optOutRate: totals.totalMicroQuizzes > 0 ? totals.optOutCount / totals.totalMicroQuizzes : 0,
+    pages,
+  };
+}
+
+function collectCommonQuestions(events, pageNumber, limit) {
+  const counts = new Map();
+  for (const event of events) {
+    if (event.type !== "ask_question" || Number(event.pageNumber) !== pageNumber) continue;
+    const q = text(event.question);
+    if (!q) continue;
+    counts.set(q, (counts.get(q) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([question, count]) => ({ text: question, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+function buildSuggestionPrompt({ lesson, page, overview }) {
+  const wrongRate = page.quizAttempts > 0 ? (page.quizAttempts - page.quizCorrect) / page.quizAttempts : null;
+  const wrongRateLine = wrongRate != null ? `, wrong rate: ${(wrongRate * 100).toFixed(0)}%` : "";
+  const quizLine = `Quiz attempts: ${page.quizAttempts}, correct: ${page.quizCorrect}${wrongRateLine}`;
+
+  return [
+    "You are helping a Vietnamese instructor find which lecture pages are confusing learners, based only on real usage numbers gathered by the app.",
+    "Write in Vietnamese.",
+    "",
+    "HARD RULES:",
+    "1. Use ONLY the numbers given below. Never invent a number that is not supplied.",
+    "2. If you reference a number in the insight or recommendation, it must be one of the numbers listed.",
+    `3. "issueType" is a short label (max 6 words), e.g. "Câu hỏi trùng lặp nhiều lần" or "Tỷ lệ trả lời sai cao".`,
+    `4. "insight" is 1-2 sentences describing what the numbers show. "recommendation" is one concrete, actionable suggestion for the instructor.`,
+    "",
+    `Lesson: ${lesson.title}`,
+    `Page: ${page.pageNumber}`,
+    `Questions asked on this page: ${page.questionCount}`,
+    `Highlights on this page: ${page.highlightCount}`,
+    `Micro quizzes generated on this page: ${page.microQuizCount}`,
+    quizLine,
+    `Rated useful: ${page.ratingUseful}, rated not useful: ${page.ratingNotUseful}`,
+    `Opted out of final quiz: ${page.optOutCount}`,
+    `Distinct learners in this lesson (sessions): ${overview.totalLearners}`,
+    page.commonQuestions.length
+      ? `Most common questions on this page:\n${page.commonQuestions.map(formatCommonQuestion).join("\n")}`
+      : "No repeated question text recorded on this page.",
+    "",
+    "Reply with strict JSON only:",
+    '{"issueType":"...","insight":"...","recommendation":"..."}',
+  ].join("\n");
+}
+
+function formatCommonQuestion(q) {
+  return `- "${q.text}" (asked ${q.count}x)`;
+}
+
+function normalizeSuggestion(json, page, overview) {
+  const wrongRate = page.quizAttempts > 0 ? (page.quizAttempts - page.quizCorrect) / page.quizAttempts : 0;
+  // Số NGƯỜI phân biệt đã hỏi/bôi đen trên trang này, không phải số lượt. Đếm lượt
+  // thì một người hỏi nhiều lần sẽ đẩy affectedRate vượt 100%.
+  const affectedLearners = page.affectedLearners;
+  // Chặn trên ở 1: tổng người học đếm theo cả bài, về lý thuyết luôn ≥ số người
+  // trên một trang, nhưng nếu log thiếu sessionId thì kẹp lại cho an toàn.
+  const affectedRate =
+    overview.totalLearners > 0 ? Math.min(affectedLearners / overview.totalLearners, 1) : 0;
+
+  return {
+    pageNumber: page.pageNumber,
+    issueType: text(json.issueType) || "Cần xem lại trang này",
+    insight: text(json.insight) || `Chưa có nhận định — ${AI_PROVIDER} không trả về nội dung hợp lệ.`,
+    recommendation: text(json.recommendation) || "Xem lại trang này thủ công.",
+    evidence: {
+      affectedLearners,
+      affectedRate,
+      wrongRate,
+      topQuestions: page.commonQuestions.map((q) => q.text),
+    },
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 /* ── Retrieval ──────────────────────────────────────────────────────── */
@@ -585,15 +912,53 @@ function normalizeQuiz(json, count, pageNumber) {
   return { questions };
 }
 
-/* ── Gemini ─────────────────────────────────────────────────────────── */
+/* ── Model providers ────────────────────────────────────────────────── */
+
+// The single choke point every AI call goes through. Both providers take the same
+// prompt string and return the same parsed JSON object, so nothing downstream —
+// normalizeAnswer, verifyQuote, the three refusal paths, the admin suggestion
+// builder — knows or cares which model produced it.
+function callModelJson(prompt) {
+  return AI_PROVIDER === "claude" ? callClaudeJson(prompt) : callGeminiJson(prompt);
+}
+
+const API_KEY_ENV = { gemini: "GEMINI_API_KEY", claude: "ANTHROPIC_API_KEY" };
+
+function resolveProvider() {
+  const fromFlag = process.argv.includes("--claude")
+    ? "claude"
+    : process.argv.includes("--gemini")
+      ? "gemini"
+      : "";
+  const value = String(fromFlag || process.env.AI_PROVIDER || "gemini").trim().toLowerCase();
+  if (value !== "gemini" && value !== "claude") {
+    // Loud, but never fatal: a typo must not kill a live demo. /api/health always
+    // reports the provider that actually ran, so this can't pass unnoticed.
+    console.error(`AI_PROVIDER khong hop le: "${value}". Chi nhan "gemini" hoac "claude". Dang chay gemini.`);
+    return "gemini";
+  }
+  return value;
+}
+
+function getApiKey() {
+  return process.env[API_KEY_ENV[AI_PROVIDER]] || "";
+}
+
+function getActiveModel() {
+  return AI_PROVIDER === "claude" ? getClaudeModel() : getGeminiModel();
+}
+
+function missingKeyError() {
+  const error = new Error(
+    `Chưa cấu hình ${API_KEY_ENV[AI_PROVIDER]} — sao chép .env.example sang .env và điền key.`
+  );
+  error.status = 503;
+  return error;
+}
 
 async function callGeminiJson(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    const error = new Error("Chưa cấu hình GEMINI_API_KEY — sao chép .env.example sang .env và điền key.");
-    error.status = 503;
-    throw error;
-  }
+  if (!apiKey) throw missingKeyError();
 
   const model = getGeminiModel();
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -628,10 +993,75 @@ function getGeminiModel() {
   return String(process.env.GEMINI_MODEL || "gemini-2.5-flash").replace(/^models\//, "");
 }
 
+// Claude has no responseMimeType equivalent, so the JSON contract is stated in a
+// system prompt. parseJsonLoose() is still the safety net, exactly as for Gemini.
+const CLAUDE_JSON_SYSTEM =
+  "You reply with a single strict JSON object and nothing else. No markdown fences, no commentary.";
+
+async function callClaudeJson(prompt) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw missingKeyError();
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: getClaudeModel(),
+      max_tokens: 2048,
+      // Haiku 4.5 still accepts temperature (the Claude 5 models reject it), so both
+      // providers run at the same 0.2 — keeps the two comparable on the golden set.
+      temperature: 0.2,
+      // No `thinking` and no `output_config.effort`: Haiku 4.5 does not think by
+      // default (good for demo latency) and returns 400 if sent an effort level.
+      system: CLAUDE_JSON_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.error?.message || `Claude request failed with ${response.status}`;
+    const error = new Error(message);
+    error.status = response.status === 429 ? 429 : 502;
+    throw error;
+  }
+
+  // Claude can decline with HTTP 200 and an empty content array — check this before
+  // reading content, or the empty-body branch below reports a misleading cause.
+  if (data.stop_reason === "refusal") {
+    const error = new Error("Claude từ chối trả lời yêu cầu này.");
+    error.status = 502;
+    throw error;
+  }
+
+  const body = (Array.isArray(data.content) ? data.content : [])
+    .filter((block) => block && block.type === "text")
+    .map((block) => block.text || "")
+    .join("")
+    .trim();
+
+  if (!body) {
+    const error = new Error("Claude returned an empty response");
+    error.status = 502;
+    throw error;
+  }
+  return parseJsonLoose(body);
+}
+
+function getClaudeModel() {
+  return String(process.env.CLAUDE_MODEL || "claude-haiku-4-5").trim();
+}
+
 /* ── HTTP plumbing ──────────────────────────────────────────────────── */
 
 async function serveStatic(pathname, res) {
-  const filePath = normalize(join(publicDir, pathname === "/" ? "/index.html" : pathname));
+  // "/" mở màn đăng nhập (mock) — nó tự chuyển tiếp sang /index.html hoặc
+  // /admin.html tuỳ vai trò. Xem codebase/public/auth.js và codebase/MOCKS.md.
+  const filePath = normalize(join(publicDir, pathname === "/" ? "/login.html" : pathname));
   if (!filePath.startsWith(publicDir)) return sendJson(res, 403, { error: "Forbidden" });
 
   let content;

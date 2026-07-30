@@ -18,7 +18,7 @@ Non-goals for this slice (the build must not violate them):
 2. No approve/regenerate/reject workflow (PRD §15) — admin only *views* suggestions in this slice, mirroring PRD §13.4's own scoping note ("Admin chỉ xem dữ liệu; chưa cần màn hình chỉnh sửa").
 3. No PDF export or version switching (PRD §16) — there is no concept of a "new version" in this slice.
 4. No pixel-coordinate heatmap. **Important scoping consequence:** the learner app no longer has a "khoanh vùng" (region/rectangle) mode — see `codebase/MOCKS.md` and the conversation that removed it. There is no x/y region data to heat-map. "Vùng tương tác" becomes **per-page highlighted-passage frequency**, not a spatial overlay. If PRD §13.3's literal heatmap is wanted later, region selection would need to come back first — flagging this rather than quietly building something PRD didn't ask for.
-5. No admin authentication — same posture as the learner side (no accounts), reached via its own route.
+5. ~~No admin authentication~~ — **superseded after the slice shipped.** A *mock* login was added: `/` now serves `login.html` with two hardcoded demo accounts (`admin` → `/admin.html`, `hocvien` → `/index.html`), role kept in `sessionStorage`. This is a **navigation gate for the demo, not access control** — passwords are constants in client-side JS and printed on the login screen, and `/api/admin/*` still answers any caller with no token. Real authentication (registration, hashed passwords, server-side sessions, per-route authorization) remains out of scope — see "Do Not Build Yet" and `codebase/MOCKS.md`. Rationale: demoing the instructor and learner views as two distinct roles reads far better than swapping URLs by hand, and `sessionStorage` (per-tab) lets both be open side by side.
 
 ## Required fix before this slice can start
 
@@ -44,12 +44,14 @@ This is Implementation Step 1 below, not a separate task — the dashboard is no
 - A **real AI call** that takes the per-page aggregation for pages crossing a minimum-signal threshold and returns one grounded insight + recommendation per flagged page (PRD §12). This is the slice's central AI decision — everything else on the page is a read-only rollup, so this is what must not be faked.
 - Admin screen: overview cards, a per-page ranking table (sortable by question count / accuracy), and a "Tạo smart suggestion" action that renders the AI's output per page.
 - Common questions: list distinct learner questions per page with counts (exact-string grouping is fine — see Can Be Mocked).
-- Micro-quiz quality view: questions ranked by rating and by opt-out rate, with the "not useful" reasons learners picked (PRD §13.4 — admin views only, matches PRD's own scoping note).
+- Micro-quiz quality view: rating and opt-out counts **per page**, ranked via the sortable "Hữu ích" / "Opt-out" columns, with the "not useful" reasons learners picked, sorted by frequency (PRD §13.4 — admin views only, matches PRD's own scoping note).
+
+  > **Wording corrected after the build.** This bullet originally said "questions ranked by rating and by opt-out rate", which reads as ranking each individual quiz *question* — but the Data Model below only ever defined `ratingUseful` / `ratingNotUseful` / `optOutCount` at page level, with no per-question type. The two halves of the doc contradicted each other; the build followed the Data Model. Per-question data *is* tracked internally while aggregating (`quizRating`, `quizReason`, `quizIncluded`, all keyed by `quizId`), it is simply rolled up to the page before being returned — so exposing a genuine per-question ranking later is an additive change, not a rewrite.
 
 ### Can Be Mocked
 
 - "Common questions" clustering can be exact-string or simple token-overlap grouping instead of real semantic clustering.
-- No live-refresh — a manual "Làm mới" reload of the aggregation is fine; no websocket/polling needed.
+- ~~No live-refresh — a manual "Làm mới" reload of the aggregation is fine; no websocket/polling needed.~~ **Shipped with polling after all**: 5-second `setInterval` re-fetch of `GET /api/admin/overview`, with an on-screen toggle to turn it off. Still no websocket. Added because the demo is *specifically* about opening the learner and instructor screens side by side and watching admin numbers move as the learner works — having to click "Làm mới" after every action defeats the point. Three details the implementation has to get right, all of them learned the hard way: the refresh runs in "quiet" mode (does not close an open detail panel, does not flash "Đang tải…", swallows network errors so one blip doesn't blank the figures on screen); it skips re-rendering the detail panel while a freshly generated smart suggestion is displayed, because `openDetail()` hides the suggestion card and would silently discard a result that cost a real AI call; and it deliberately does **not** bail out on `document.hidden` — with both screens as tabs in one window the admin tab is always hidden, so that guard stops it refreshing exactly when it is needed. Browsers already throttle background timers, and a `visibilitychange` listener forces an immediate refresh when the tab is looked at again.
 - The per-page ranking table **is** the heatmap for this slice (see Non-goal 4) — no canvas overlay needed.
 
 ### Do Not Build Yet
@@ -83,7 +85,9 @@ type PageAggregate = {
   ratingUseful: number;
   ratingNotUseful: number;
   optOutCount: number;
+  affectedLearners: number;    // distinct sessionIds that asked or highlighted on this page
   commonQuestions: { text: string; count: number }[]; // top N by count
+  notUsefulReasons: { reason: string; count: number }[]; // sorted by count
 };
 
 type OverviewAggregate = {
@@ -104,8 +108,8 @@ type SmartSuggestion = {
   insight: string;             // grounded sentence citing the real numbers
   recommendation: string;      // concrete next step
   evidence: {                  // echoed back so the UI can show its receipts
-    affectedLearners: number;
-    affectedRate: number;      // affectedLearners / totalLearners
+    affectedLearners: number;  // distinct sessionIds on this page — PEOPLE, not events
+    affectedRate: number;      // affectedLearners / totalLearners, clamped to ≤ 1
     wrongRate: number;         // quizCorrect/quizAttempts inverted, for pages with quiz data
     topQuestions: string[];
   };
@@ -113,7 +117,9 @@ type SmartSuggestion = {
 };
 ```
 
-`totalLearners` is a necessary substitution for PRD §12.1's "số lượng người học tương tác" — there are no accounts, so distinct `sessionId` in the event log is the only available proxy. This should be stated on the admin screen, not silently presented as a real headcount.
+`totalLearners` is a necessary substitution for PRD §12.1's "số lượng người học tương tác" — there are no accounts, so distinct `sessionId` in the event log is the only available proxy. This should be stated on the admin screen, not silently presented as a real headcount. (The mock login added later does not change this: there is a single shared `hocvien` account, so the count still measures sessions, not people.)
+
+**`affectedLearners` counts people, not events.** The first implementation set it to `page.questionCount`, which is a count of *questions asked*, and then divided it by `totalLearners` — so one learner asking five questions on a page in a two-learner class rendered as "Tỷ lệ trên tổng người học 250%". It is now the number of distinct `sessionId`s that asked a question or highlighted on that page, and the ratio is clamped to 1. Worth stating explicitly because this number is shown to the instructor as evidence *underneath the AI's claim* — a ratio above 100% next to a grounded insight would undermine the whole point of showing receipts.
 
 ## API Contract
 
@@ -159,7 +165,7 @@ Returns the full list of learner questions asked on that page (for the "common q
 Functional:
 
 - Every number on the overview and per-page table is computed from real `events.jsonl` data — none hand-typed or hardcoded.
-- At least one real AI call (`POST /api/admin/suggestions`) — the slice's central decision.
+- At least one real AI call (`POST /api/admin/suggestions`) — the slice's central decision. It runs through the same `callModelJson()` choke point as the three learner-side calls, so it works under either provider: Gemini by default, or Claude via `npm run dev:claude`. Verified end-to-end against Claude — the returned insight cited a 67% wrong rate that matched the `wrongRate` the server had computed itself, i.e. the grounding rule held rather than the model inventing a figure.
 - A page with too little signal is refused with a clear reason, not padded into a fake suggestion.
 - The suggestion card shows the exact numbers it was grounded in, next to the AI's text.
 

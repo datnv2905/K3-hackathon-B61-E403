@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VLearn · Admin Dashboard</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-body">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-mark">V</div>
+        <div class="brand-text">
+          <strong>VLearn</strong>
+          <span>Admin Dashboard</span>
+        </div>
+      </div>
+
+      <label class="admin-field">
+        <span>Bài giảng</span>
+        <select id="lessonSelect"></select>
+      </label>
+
+      <button class="ghost-btn" id="refreshBtn" type="button">Làm mới</button>
+
+      <label class="admin-autorefresh">
+        <input type="checkbox" id="autoRefreshToggle" checked />
+        <span>Tự làm mới mỗi 5 giây</span>
+      </label>
+
+      <section class="admin-overview" id="overviewCards" aria-label="Tổng quan"></section>
+
+      <p class="admin-note">
+        "Số người học" là số <code>sessionId</code> khác nhau ghi nhận được — không phải tài khoản thật, vì bản này
+        chưa có đăng nhập.
+      </p>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <h1>Bảng theo dõi từng trang</h1>
+        <p>Chọn một trang để xem câu hỏi thường gặp, chất lượng micro quiz và tạo smart suggestion.</p>
+      </header>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="pageTable">
+          <thead>
+            <tr>
+              <th data-sort="pageNumber">Trang</th>
+              <th data-sort="questionCount">Câu hỏi</th>
+              <th data-sort="highlightCount">Bôi đen</th>
+              <th data-sort="microQuizCount">Micro quiz</th>
+              <th data-sort="accuracy">Độ chính xác quiz</th>
+              <th data-sort="ratingUseful">Hữu ích</th>
+              <th data-sort="optOutCount">Opt-out</th>
+            </tr>
+          </thead>
+          <tbody id="pageTableBody"></tbody>
+        </table>
+      </div>
+
+      <section class="admin-detail" id="detailPanel" hidden>
+        <header>
+          <h2 id="detailTitle">Trang —</h2>
+          <button class="ghost-btn" id="closeDetailBtn" type="button">Đóng</button>
+        </header>
+
+        <div class="admin-detail-grid">
+          <section class="admin-card">
+            <h3>Câu hỏi thường gặp</h3>
+            <ul class="admin-list" id="commonQuestionsList"></ul>
+          </section>
+
+          <section class="admin-card">
+            <h3>Chất lượng micro quiz</h3>
+            <dl class="admin-kv" id="quizQualityKv"></dl>
+            <ul class="admin-list" id="notUsefulReasonsList"></ul>
+          </section>
+        </div>
+
+        <section class="admin-card admin-suggestion-block">
+          <div class="admin-suggestion-head">
+            <h3>Smart suggestion</h3>
+            <button class="final-btn" id="suggestBtn" type="button">Tạo smart suggestion</button>
+          </div>
+          <p class="hint" id="suggestionHint"></p>
+          <article class="admin-suggestion-card" id="suggestionCard" hidden></article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/admin.js" type="module"></script>
+  </body>
+</html>

@@ -312,3 +312,10 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 ## §9. Changelog
 | Thời điểm | Đổi gì | Vì sao (trỏ về feedback/case nào) |
+| CP1 | Lên ý tưởng | thấy vlearn chưa có tính năng này |
+| CP2 | Hoàn thành UI cơ bản + dummy data | Hình dung ban đầu về dự án |
+| CP3 | AI thật + có test + test thật | test nhanh để biết nhóm còn thiếu gì |
+| CP4 | Cải tiến dữ liệu thật và  | Có thể dùng thật với nhu cầu thật |
+| CP5 | Tìm 3 user thật + nhận feedback | Có feedback thực tế và cải tiến theo |
+| CP6 | - | - |
+

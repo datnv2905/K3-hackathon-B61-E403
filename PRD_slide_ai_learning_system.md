@@ -1,16 +1,18 @@
+
 # Product Requirements Document (PRD)
 
 ## Hệ thống Bài giảng Slide + AI Hỗ trợ Học tập
 
-| Thuộc tính | Giá trị |
-|---|---|
-| Phiên bản | 1.0 |
-| Trạng thái | Draft hoàn chỉnh để review |
-| Loại sản phẩm | Functional prototype |
-| Ngôn ngữ | Tiếng Việt |
-| Định dạng bài giảng | PDF |
-| Phạm vi thử nghiệm | 1–2 file PDF ngắn |
-| Vai trò | Người học, Giảng viên/Admin |
+
+| Thuộc tính             | Giá trị                        |
+| -------------------------- | ---------------------------------- |
+| Phiên bản              | 1.0                              |
+| Trạng thái             | Draft hoàn chỉnh để review   |
+| Loại sản phẩm         | Functional prototype             |
+| Ngôn ngữ               | Tiếng Việt                     |
+| Định dạng bài giảng | PDF                              |
+| Phạm vi thử nghiệm    | 1–2 file PDF ngắn              |
+| Vai trò                 | Người học, Giảng viên/Admin |
 
 ---
 
@@ -664,35 +666,36 @@ Admin có thể:
 
 ## 17. Functional Requirements
 
-| ID | Yêu cầu | Ưu tiên |
-|---|---|---|
-| FR-01 | Mở và hiển thị PDF dạng cuộn | Must-have |
-| FR-02 | Đặt câu hỏi tự do về toàn bài giảng | Must-have |
-| FR-03 | Highlight văn bản | Must-have |
-| FR-04 | Khoanh vùng hình ảnh hoặc diagram | Must-have |
-| FR-05 | Gửi vùng được chọn làm context cho chatbot | Must-have |
-| FR-06 | Hiển thị số slide và đoạn trích nguồn | Must-have |
-| FR-07 | Người học chủ động tạo micro quiz | Must-have |
-| FR-08 | AI tạo micro quiz 1–3 câu | Must-have |
-| FR-09 | Hỗ trợ trắc nghiệm và tự luận ngắn | Must-have |
-| FR-10 | Hiển thị đáp án, giải thích và nguồn | Must-have |
-| FR-11 | Cho phép đánh giá micro quiz | Must-have |
-| FR-12 | Cho phép nhập lý do đánh giá không hữu ích | Should-have |
-| FR-13 | Cho phép opt out khỏi quiz tổng hợp | Must-have |
-| FR-14 | Cho phép thay đổi trạng thái opt-out trước quiz tổng hợp | Must-have |
-| FR-15 | Giảng viên tạo trước bộ câu hỏi nền | Must-have |
-| FR-16 | Quiz tổng hợp kết hợp câu hỏi nền và micro quiz được phép sử dụng | Must-have |
-| FR-17 | Không đưa micro quiz đã opt out vào quiz tổng hợp | Must-have |
-| FR-18 | Loại bỏ câu hỏi trùng lặp trong quiz tổng hợp | Should-have |
-| FR-19 | Track tọa độ highlight và khoanh vùng | Must-have |
-| FR-20 | Track kết quả và rating micro quiz | Must-have |
-| FR-21 | Dashboard hiển thị analytics và rating | Must-have |
-| FR-22 | Tạo smart suggestion từ ba tín hiệu chính | Must-have |
-| FR-23 | AI tạo lại diagram | Must-have |
-| FR-24 | Admin Approve, Regenerate hoặc Reject | Must-have |
-| FR-25 | Admin chỉnh sửa trước khi áp dụng | Must-have |
-| FR-26 | Xuất phiên bản PDF mới | Must-have |
-| FR-27 | Giữ và switch giữa các phiên bản | Must-have |
+
+| ID    | Yêu cầu                                                                       | Ưu tiên   |
+| ------- | --------------------------------------------------------------------------------- | ------------- |
+| FR-01 | Mở và hiển thị PDF dạng cuộn                                              | Must-have   |
+| FR-02 | Đặt câu hỏi tự do về toàn bài giảng                                    | Must-have   |
+| FR-03 | Highlight văn bản                                                             | Must-have   |
+| FR-04 | Khoanh vùng hình ảnh hoặc diagram                                           | Must-have   |
+| FR-05 | Gửi vùng được chọn làm context cho chatbot                               | Must-have   |
+| FR-06 | Hiển thị số slide và đoạn trích nguồn                                   | Must-have   |
+| FR-07 | Người học chủ động tạo micro quiz                                        | Must-have   |
+| FR-08 | AI tạo micro quiz 1–3 câu                                                    | Must-have   |
+| FR-09 | Hỗ trợ trắc nghiệm và tự luận ngắn                                      | Must-have   |
+| FR-10 | Hiển thị đáp án, giải thích và nguồn                                   | Must-have   |
+| FR-11 | Cho phép đánh giá micro quiz                                                | Must-have   |
+| FR-12 | Cho phép nhập lý do đánh giá không hữu ích                             | Should-have |
+| FR-13 | Cho phép opt out khỏi quiz tổng hợp                                         | Must-have   |
+| FR-14 | Cho phép thay đổi trạng thái opt-out trước quiz tổng hợp               | Must-have   |
+| FR-15 | Giảng viên tạo trước bộ câu hỏi nền                                    | Must-have   |
+| FR-16 | Quiz tổng hợp kết hợp câu hỏi nền và micro quiz được phép sử dụng | Must-have   |
+| FR-17 | Không đưa micro quiz đã opt out vào quiz tổng hợp                       | Must-have   |
+| FR-18 | Loại bỏ câu hỏi trùng lặp trong quiz tổng hợp                           | Should-have |
+| FR-19 | Track tọa độ highlight và khoanh vùng                                      | Must-have   |
+| FR-20 | Track kết quả và rating micro quiz                                           | Must-have   |
+| FR-21 | Dashboard hiển thị analytics và rating                                       | Must-have   |
+| FR-22 | Tạo smart suggestion từ ba tín hiệu chính                                  | Must-have   |
+| FR-23 | AI tạo lại diagram                                                            | Must-have   |
+| FR-24 | Admin Approve, Regenerate hoặc Reject                                          | Must-have   |
+| FR-25 | Admin chỉnh sửa trước khi áp dụng                                         | Must-have   |
+| FR-26 | Xuất phiên bản PDF mới                                                      | Must-have   |
+| FR-27 | Giữ và switch giữa các phiên bản                                          | Must-have   |
 
 ---
 

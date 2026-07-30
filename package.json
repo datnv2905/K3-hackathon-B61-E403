@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "node codebase/server.js",
-    "start": "node codebase/server.js"
+    "start": "node codebase/server.js",
+    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json"
   }
 }

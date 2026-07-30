@@ -1,0 +1,734 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_day06_golden_set_v1",
+    "model": "deterministic-intent-router",
+    "started_at": "2026-07-30T08:51:49.557Z",
+    "finished_at": "2026-07-30T08:51:49.562Z",
+    "total": 25,
+    "passed": 3,
+    "failed": 22,
+    "pass_rate": 0.12
+  },
+  "results": [
+    {
+      "id": "TC01_free_question_roi",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC02_highlight_ask_gate",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giải thích cổng đánh giá (go / no-go)",
+              "context_type": "highlight",
+              "slide_number": 3,
+              "selected_text": "cổng đánh giá (go / no-go)"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giáº£i thÃ­ch cổng đánh giá (go / no-go)",
+              "context_type": "highlight",
+              "slide_number": 3,
+              "selected_text": "cổng đánh giá (go / no-go)"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: arg query expected \"giải thích cổng đánh giá (go / no-go)\", got \"giáº£i thÃ­ch cổng đánh giá (go / no-go)\""
+      ]
+    },
+    {
+      "id": "TC03_region_select_diagram",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "context_type": "region",
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Mình vừa khoanh vùng sơ đồ AI Product Life Cycle ở slide 3, sơ đồ này có ý nghĩa gì?",
+              "context_type": "free",
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: arg context_type expected \"region\", got \"free\""
+      ]
+    },
+    {
+      "id": "TC04_slide_number_boundary",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "context_type": "free",
+              "slide_number": 6
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Ở trang cuối cùng của bài Day 6 (trang 6 trên slide viewer, tương ứng trang 37 file gốc), phần tóm tắt nói gì?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: arg slide_number expected 6, got undefined"
+      ]
+    },
+    {
+      "id": "TC05_generate_micro_quiz_basic",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Problem Statement Framework"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Mình đọc xong đoạn Problem Statement Framework rồi, kiểm tra mức độ hiểu giúp mình.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected generate_micro_quiz, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC06_micro_quiz_num_questions_boundary",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "num_questions": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Tạo cho mình một bài kiểm tra thật dài, khoảng 10 câu, về AI Product Life Cycle.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected generate_micro_quiz, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC07_micro_quiz_short_answer_type",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Golden Set"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Golden Set"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC08_rate_quiz_helpful",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "rate_micro_quiz",
+            "args": {
+              "quiz_id": "mq_0007",
+              "rating": "helpful"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giáº£i thÃ­ch Hữu ích",
+              "context_type": "highlight",
+              "selected_text": "Hữu ích"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected rate_micro_quiz, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC09_rate_quiz_not_helpful_with_reason",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "rate_micro_quiz",
+            "args": {
+              "quiz_id": "mq_0008",
+              "rating": "not_helpful",
+              "reason": "Không liên quan đến nội dung vừa hỏi"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {}
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected rate_micro_quiz, got generate_micro_quiz"
+      ]
+    },
+    {
+      "id": "TC10_optout_disable",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": false
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {}
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected set_quiz_optout, got generate_micro_quiz"
+      ]
+    },
+    {
+      "id": "TC11_optout_reenable_before_final",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": true
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Thôi mình đổi ý, cho câu hỏi mq_0007 xuất hiện lại trong quiz tổng hợp đi, mình chưa bắt đầu làm quiz tổng hợp mà.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected set_quiz_optout, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC12_optout_locked_after_final_started",
+      "phase": "B",
+      "failure_type": "unnecessary_tool",
+      "pass": false,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "À khoan, mình muốn loại câu mq_0007 ra khỏi quiz tổng hợp lần này.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "expected no tool, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC13_start_final_quiz",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "start_final_quiz",
+            "args": {}
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Mình đã học hết bài giảng rồi, cho mình làm quiz tổng hợp cuối bài.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected start_final_quiz, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC14_admin_dashboard_overview",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "overview"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Cho mình xem tổng quan dashboard: số câu hỏi chatbot, số highlight, số vùng khoanh và tỷ lệ trả lời đúng.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected get_admin_dashboard, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC15_admin_slide_heatmap",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "slide_heatmap"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Slide nào bị học viên khoanh vùng/hỏi nhiều nhất trong bài Day 6?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected get_admin_dashboard, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC16_smart_suggestion_request",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_smart_suggestions",
+            "args": {}
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Hệ thống có đề xuất gì để cải thiện slide không?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected get_smart_suggestions, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC17_regenerate_diagram_request",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "regenerate_diagram",
+            "args": {
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Nhiều học viên khoanh vùng sơ đồ AI Product Life Cycle ở slide 3 và trả lời sai quiz liên quan. Hãy tạo lại diagram này cho rõ hơn.",
+              "context_type": "free",
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected regenerate_diagram, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC18_review_diagram_approve",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "approve"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Phương án diagram mới (proposal_id: prop_0012) ổn rồi, duyệt luôn.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected review_diagram_proposal, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC19_review_diagram_regenerate_with_note",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "regenerate",
+              "note": "Bổ sung thêm nhãn cho từng bước"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Phương án prop_0012 chưa ổn, giữ nguyên slide hiện tại và tạo lại phương án khác, lần này bổ sung thêm nhãn cho từng bước.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected review_diagram_proposal, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC20_review_diagram_reject",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "reject",
+              "note": "Không sát với nội dung Markdown gốc"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Từ chối phương án prop_0012, lý do là sơ đồ mới không sát với nội dung Markdown gốc.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected review_diagram_proposal, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC21_export_pdf_new_version",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "export_pdf_version",
+            "args": {
+              "description": "Cập nhật diagram slide 3"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giáº£i thÃ­ch Cập nhật diagram slide 3",
+              "context_type": "highlight",
+              "slide_number": 3,
+              "selected_text": "Cập nhật diagram slide 3"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected export_pdf_version, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC22_switch_pdf_version",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "switch_pdf_version",
+            "args": {
+              "version_id": "v1"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "(Vai trò: Giảng viên) Chuyển Active version của bài Day 6 về version 1 (bản gốc), vì version 2 có lỗi.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected switch_pdf_version, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC23_out_of_scope_internet_search",
+      "phase": "B",
+      "failure_type": "out_of_scope",
+      "pass": false,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Lên mạng tìm giúp mình bài báo mới nhất về AI Product Management để bổ sung vào câu trả lời nhé.",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "expected no tool, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC24_out_of_scope_pptx_upload",
+      "phase": "B",
+      "failure_type": "out_of_scope",
+      "pass": true,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": []
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC25_missing_info_vague_question",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": false,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Cái đó là sao vậy?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "expected no tool, got ask_chatbot"
+      ]
+    }
+  ]
+}

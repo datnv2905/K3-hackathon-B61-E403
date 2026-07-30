@@ -1,0 +1,556 @@
+{
+    "dataset_id": "vlearn_day06_golden_set_v1",
+    "dataset_role": "golden",
+    "description": "Bộ 25 golden test case cho hệ thống Bài giảng Slide + AI Hỗ trợ Học tập (VLearn), xây dựng dựa trên PRD v1.0 và demo.html. Bao phủ các luồng: hỏi tự do, hỏi theo highlight/khoanh vùng, micro quiz (tạo/đánh giá/opt-out), quiz tổng hợp, admin dashboard, smart suggestion, AI regenerate diagram, workflow duyệt và quản lý phiên bản PDF, cùng các case out-of-scope / missing-info.",
+    "tool_schema_reference": {
+        "ask_chatbot": {
+            "args": [
+                "query",
+                "context_type(free|highlight|region)",
+                "slide_number",
+                "selected_text"
+            ]
+        },
+        "generate_micro_quiz": {
+            "args": [
+                "source_slide",
+                "source_context",
+                "num_questions(1-3)"
+            ]
+        },
+        "rate_micro_quiz": {
+            "args": [
+                "quiz_id",
+                "rating(helpful|not_helpful)",
+                "reason"
+            ]
+        },
+        "set_quiz_optout": {
+            "args": [
+                "quiz_id",
+                "include_in_final(bool)"
+            ]
+        },
+        "start_final_quiz": {
+            "args": []
+        },
+        "get_admin_dashboard": {
+            "args": [
+                "filter"
+            ]
+        },
+        "get_smart_suggestions": {
+            "args": []
+        },
+        "regenerate_diagram": {
+            "args": [
+                "slide_number",
+                "reason"
+            ]
+        },
+        "review_diagram_proposal": {
+            "args": [
+                "proposal_id",
+                "action(approve|regenerate|reject)",
+                "note"
+            ]
+        },
+        "export_pdf_version": {
+            "args": [
+                "description"
+            ]
+        },
+        "switch_pdf_version": {
+            "args": [
+                "version_id"
+            ]
+        }
+    },
+    "allowed_failure_types": [
+        "wrong_tool",
+        "wrong_arg_value",
+        "wrong_boundary",
+        "unnecessary_tool",
+        "out_of_scope",
+        "missing_info"
+    ],
+    "cases": [
+        {
+            "id": "TC01_free_question_roi",
+            "phase": "B",
+            "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+            "failure_type": "wrong_tool",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "ask_chatbot",
+                        "args": {
+                            "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+                            "context_type": "free"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "Câu hỏi tự do về nội dung bài giảng (FR-02) phải gọi ask_chatbot với context_type=free, không phải generate_micro_quiz hay các tool khác."
+            }
+        },
+        {
+            "id": "TC02_highlight_ask_gate",
+            "phase": "B",
+            "query": "Mình vừa bôi đen đoạn 'cổng đánh giá (go / no-go)' ở slide 3, giải thích giúp mình khái niệm này.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "ask_chatbot",
+                        "args": {
+                            "query": "giải thích cổng đánh giá (go / no-go)",
+                            "context_type": "highlight",
+                            "slide_number": 3,
+                            "selected_text": "cổng đánh giá (go / no-go)"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "AC-01: hỏi bằng highlight phải truyền đúng selected_text và slide_number vào ask_chatbot với context_type=highlight."
+            }
+        },
+        {
+            "id": "TC03_region_select_diagram",
+            "phase": "B",
+            "query": "Mình vừa khoanh vùng sơ đồ AI Product Life Cycle ở slide 3, sơ đồ này có ý nghĩa gì?",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "ask_chatbot",
+                        "args": {
+                            "context_type": "region",
+                            "slide_number": 3
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "AC-02: hỏi bằng khoanh vùng diagram phải dùng context_type=region kèm đúng slide_number, không nhầm sang context_type=highlight."
+            }
+        },
+        {
+            "id": "TC04_slide_number_boundary",
+            "phase": "B",
+            "query": "Ở trang cuối cùng của bài Day 6 (trang 6 trên slide viewer, tương ứng trang 37 file gốc), phần tóm tắt nói gì?",
+            "failure_type": "wrong_boundary",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "ask_chatbot",
+                        "args": {
+                            "context_type": "free",
+                            "slide_number": 6
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "Kiểm tra model dùng đúng số thứ tự slide trong bộ slide hiển thị (6) chứ không nhầm với số trang PDF gốc (37) — ranh giới định danh slide."
+            }
+        },
+        {
+            "id": "TC05_generate_micro_quiz_basic",
+            "phase": "B",
+            "query": "Mình đọc xong đoạn Problem Statement Framework rồi, kiểm tra mức độ hiểu giúp mình.",
+            "failure_type": "wrong_tool",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "generate_micro_quiz",
+                        "args": {
+                            "source_context": "Problem Statement Framework"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "FR-07/FR-08: khi người học chủ động bấm 'Kiểm tra mức độ hiểu' phải gọi generate_micro_quiz, không gọi ask_chatbot hay start_final_quiz."
+            }
+        },
+        {
+            "id": "TC06_micro_quiz_num_questions_boundary",
+            "phase": "B",
+            "query": "Tạo cho mình một bài kiểm tra thật dài, khoảng 10 câu, về AI Product Life Cycle.",
+            "failure_type": "wrong_boundary",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "generate_micro_quiz",
+                        "args": {
+                            "num_questions": 3
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "8.2: micro quiz chỉ giới hạn 1–3 câu; yêu cầu 10 câu phải được chốt về giá trị hợp lệ tối đa (3), không truyền num_questions=10."
+            }
+        },
+        {
+            "id": "TC07_micro_quiz_short_answer_type",
+            "phase": "B",
+            "query": "Tạo micro quiz dạng tự luận ngắn cho phần Golden Set, mình muốn tự gõ câu trả lời chứ không chọn trắc nghiệm.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "generate_micro_quiz",
+                        "args": {
+                            "source_context": "Golden Set"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "8.2: micro quiz hỗ trợ loại tự luận ngắn; case kiểm tra model không tự ý đổi sang generate quiz trắc nghiệm khi người học yêu cầu rõ dạng tự luận."
+            }
+        },
+        {
+            "id": "TC08_rate_quiz_helpful",
+            "phase": "B",
+            "query": "Câu hỏi vừa rồi (quiz_id: mq_0007) khá hữu ích, mình muốn đánh giá 'Hữu ích'.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "rate_micro_quiz",
+                        "args": {
+                            "quiz_id": "mq_0007",
+                            "rating": "helpful"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "AC-04: đánh giá micro quiz hữu ích phải gọi rate_micro_quiz với rating=helpful, không tự thêm reason khi người dùng không cung cấp lý do."
+            }
+        },
+        {
+            "id": "TC09_rate_quiz_not_helpful_with_reason",
+            "phase": "B",
+            "query": "Micro quiz mq_0008 không hữu ích, lý do là câu hỏi không liên quan đến nội dung mình vừa hỏi.",
+            "failure_type": "missing_info",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "rate_micro_quiz",
+                        "args": {
+                            "quiz_id": "mq_0008",
+                            "rating": "not_helpful",
+                            "reason": "Không liên quan đến nội dung vừa hỏi"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "8.4: khi người học nêu rõ lý do không hữu ích, model phải trích xuất đúng lý do vào tham số reason thay vì để trống (thiếu thông tin)."
+            }
+        },
+        {
+            "id": "TC10_optout_disable",
+            "phase": "B",
+            "query": "Đừng đưa câu hỏi của micro quiz mq_0007 vào quiz tổng hợp cuối bài nữa.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "set_quiz_optout",
+                        "args": {
+                            "quiz_id": "mq_0007",
+                            "include_in_final": false
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "8.5/AC-05: tắt tùy chọn đưa lại vào quiz tổng hợp phải set include_in_final=false, đúng quiz_id được nêu."
+            }
+        },
+        {
+            "id": "TC11_optout_reenable_before_final",
+            "phase": "B",
+            "turns": [
+                {
+                    "role": "user",
+                    "content": "Đừng đưa micro quiz mq_0007 vào quiz tổng hợp nữa."
+                },
+                {
+                    "role": "user",
+                    "content": "Thôi mình đổi ý, cho câu hỏi mq_0007 xuất hiện lại trong quiz tổng hợp đi, mình chưa bắt đầu làm quiz tổng hợp mà."
+                }
+            ],
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "set_quiz_optout",
+                        "args": {
+                            "quiz_id": "mq_0007",
+                            "include_in_final": true
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "8.5: người học có thể đổi lại lựa chọn opt-out trước khi bắt đầu quiz tổng hợp; chỉ chấm turn cuối, kỳ vọng include_in_final=true."
+            }
+        },
+        {
+            "id": "TC12_optout_locked_after_final_started",
+            "phase": "B",
+            "turns": [
+                {
+                    "role": "user",
+                    "content": "Bắt đầu làm quiz tổng hợp cuối bài cho mình."
+                },
+                {
+                    "role": "user",
+                    "content": "À khoan, mình muốn loại câu mq_0007 ra khỏi quiz tổng hợp lần này."
+                }
+            ],
+            "failure_type": "unnecessary_tool",
+            "expect": {
+                "no_tool": true
+            },
+            "metadata": {
+                "what_it_tests": "8.5: 'Khi đã bắt đầu quiz tổng hợp, danh sách câu hỏi được khóa cho lần làm đó' — model không được gọi set_quiz_optout sau khi quiz tổng hợp đã bắt đầu, chỉ nên giải thích bằng lời."
+            }
+        },
+        {
+            "id": "TC13_start_final_quiz",
+            "phase": "B",
+            "query": "Mình đã học hết bài giảng rồi, cho mình làm quiz tổng hợp cuối bài.",
+            "failure_type": "wrong_tool",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "start_final_quiz",
+                        "args": {}
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "9.1: yêu cầu làm quiz tổng hợp phải gọi start_final_quiz, không gọi lại generate_micro_quiz."
+            }
+        },
+        {
+            "id": "TC14_admin_dashboard_overview",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Cho mình xem tổng quan dashboard: số câu hỏi chatbot, số highlight, số vùng khoanh và tỷ lệ trả lời đúng.",
+            "failure_type": "wrong_tool",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "get_admin_dashboard",
+                        "args": {
+                            "filter": "overview"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "13.1: giảng viên xem tổng quan dashboard phải gọi get_admin_dashboard, không gọi get_smart_suggestions."
+            }
+        },
+        {
+            "id": "TC15_admin_slide_heatmap",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Slide nào bị học viên khoanh vùng/hỏi nhiều nhất trong bài Day 6?",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "get_admin_dashboard",
+                        "args": {
+                            "filter": "slide_heatmap"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "13.3: yêu cầu xem heatmap theo slide phải truyền đúng filter liên quan đến heatmap/slide thay vì filter=overview chung chung."
+            }
+        },
+        {
+            "id": "TC16_smart_suggestion_request",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Hệ thống có đề xuất gì để cải thiện slide không?",
+            "failure_type": "wrong_tool",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "get_smart_suggestions",
+                        "args": {}
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "12: yêu cầu xem smart suggestion phải gọi get_smart_suggestions chứ không phải get_admin_dashboard."
+            }
+        },
+        {
+            "id": "TC17_regenerate_diagram_request",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Nhiều học viên khoanh vùng sơ đồ AI Product Life Cycle ở slide 3 và trả lời sai quiz liên quan. Hãy tạo lại diagram này cho rõ hơn.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "regenerate_diagram",
+                        "args": {
+                            "slide_number": 3
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "14: yêu cầu AI tạo lại diagram phải gọi regenerate_diagram với đúng slide_number=3 (AI Product Life Cycle), không nhầm sang slide khác."
+            }
+        },
+        {
+            "id": "TC18_review_diagram_approve",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Phương án diagram mới (proposal_id: prop_0012) ổn rồi, duyệt luôn.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "review_diagram_proposal",
+                        "args": {
+                            "proposal_id": "prop_0012",
+                            "action": "approve"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "15.1/AC-09: Approve phương án AI phải gọi review_diagram_proposal với action=approve và đúng proposal_id."
+            }
+        },
+        {
+            "id": "TC19_review_diagram_regenerate_with_note",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Phương án prop_0012 chưa ổn, giữ nguyên slide hiện tại và tạo lại phương án khác, lần này bổ sung thêm nhãn cho từng bước.",
+            "failure_type": "missing_info",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "review_diagram_proposal",
+                        "args": {
+                            "proposal_id": "prop_0012",
+                            "action": "regenerate",
+                            "note": "Bổ sung thêm nhãn cho từng bước"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "15.2: khi Admin yêu cầu Regenerate kèm góp ý bổ sung, note phải được truyền vào tool, không bỏ sót yêu cầu chi tiết của giảng viên."
+            }
+        },
+        {
+            "id": "TC20_review_diagram_reject",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Từ chối phương án prop_0012, lý do là sơ đồ mới không sát với nội dung Markdown gốc.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "review_diagram_proposal",
+                        "args": {
+                            "proposal_id": "prop_0012",
+                            "action": "reject",
+                            "note": "Không sát với nội dung Markdown gốc"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "15.3: Reject phải dùng action=reject (không phải approve/regenerate) kèm lý do Admin cung cấp."
+            }
+        },
+        {
+            "id": "TC21_export_pdf_new_version",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Diagram slide 3 đã duyệt xong, xuất bản PDF mới cho bài Day 6 với mô tả 'Cập nhật diagram slide 3'.",
+            "failure_type": "missing_info",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "export_pdf_version",
+                        "args": {
+                            "description": "Cập nhật diagram slide 3"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "16.1/AC-10: sau khi Approve, xuất phiên bản PDF mới phải gọi export_pdf_version kèm mô tả thay đổi do Admin cung cấp."
+            }
+        },
+        {
+            "id": "TC22_switch_pdf_version",
+            "phase": "B",
+            "query": "(Vai trò: Giảng viên) Chuyển Active version của bài Day 6 về version 1 (bản gốc), vì version 2 có lỗi.",
+            "failure_type": "wrong_arg_value",
+            "expect": {
+                "tool_calls": [
+                    {
+                        "name": "switch_pdf_version",
+                        "args": {
+                            "version_id": "v1"
+                        }
+                    }
+                ]
+            },
+            "metadata": {
+                "what_it_tests": "16.2: quay lại phiên bản cũ phải gọi switch_pdf_version với đúng version_id do Admin chỉ định (v1), không mặc định version mới nhất."
+            }
+        },
+        {
+            "id": "TC23_out_of_scope_internet_search",
+            "phase": "B",
+            "query": "Lên mạng tìm giúp mình bài báo mới nhất về AI Product Management để bổ sung vào câu trả lời nhé.",
+            "failure_type": "out_of_scope",
+            "expect": {
+                "no_tool": true
+            },
+            "metadata": {
+                "what_it_tests": "10.1/4.2: 'Chatbot không tìm kiếm Internet trong phạm vi prototype' — model không được gọi bất kỳ tool tìm kiếm nào, chỉ nên trả lời rằng chức năng này ngoài phạm vi."
+            }
+        },
+        {
+            "id": "TC24_out_of_scope_pptx_upload",
+            "phase": "B",
+            "query": "Mình có file PowerPoint (.pptx) của bài giảng, hệ thống mở và xử lý luôn file đó cho mình được không?",
+            "failure_type": "out_of_scope",
+            "expect": {
+                "no_tool": true
+            },
+            "metadata": {
+                "what_it_tests": "4.2: hệ thống chỉ hỗ trợ PDF, không hỗ trợ PPTX/Google Slides/Keynote trong phạm vi prototype; model không được gọi ask_chatbot hay bất kỳ tool xử lý file nào, chỉ giải thích giới hạn phạm vi."
+            }
+        },
+        {
+            "id": "TC25_missing_info_vague_question",
+            "phase": "B",
+            "query": "Cái đó là sao vậy?",
+            "failure_type": "missing_info",
+            "expect": {
+                "no_tool": true
+            },
+            "metadata": {
+                "what_it_tests": "2.1: người học 'khó mô tả chính xác phần nội dung mình muốn hỏi'; câu hỏi quá mơ hồ, không có ngữ cảnh highlight/khoanh vùng/slide cụ thể — model nên hỏi lại làm rõ thay vì đoán và gọi ask_chatbot với query mơ hồ."
+            }
+        }
+    ]
+}

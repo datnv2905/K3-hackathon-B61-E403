@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLearn – AI Tutor Demo (Hackathon)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#16213e;color:#333;height:100vh;overflow:hidden;display:flex;}
+
+/* ── SIDEBAR ─────────────────────────────── */
+.sidebar{width:230px;background:#16213e;color:#fff;display:flex;flex-direction:column;padding:14px 0;border-right:1px solid #2a2a4a;flex-shrink:0;}
+.logo{padding:0 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #2a2a4a;margin-bottom:10px;}
+.logo-v{width:30px;height:30px;background:#4f46e5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;}
+.logo-t{font-size:17px;font-weight:700;}
+.sidebar-nav{flex:1;padding:0 10px;overflow-y:auto;}
+.nav-label{font-size:10px;color:#4a4a7a;padding:4px 8px;letter-spacing:.5px;margin-bottom:4px;}
+.day-row{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:7px;color:#7070a0;font-size:12px;margin-bottom:2px;}
+.day-row:hover{background:#2a2a4a;color:#a0a0c0;}
+.day-row.active{background:#2a2a4a;color:#fff;}
+.day-badge{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:8px;background:#4f46e5;color:#fff;}
+.day-badge.on{background:#10b981;}
+.file-row{padding:6px 10px 6px 26px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;color:#6060a0;font-size:11px;margin-bottom:1px;}
+.file-row:hover{background:#2a2a4a;}
+.file-row.active{background:#3730a3;color:#fff;}
+
+/* ── MAIN ────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;background:#f0f2f5;overflow:hidden;}
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.doc-title{font-size:13px;font-weight:600;color:#111;}
+.doc-sub{font-size:11px;color:#9ca3af;}
+.topbar-right{display:flex;align-items:center;gap:6px;}
+.tb-btn{padding:5px 10px;border-radius:5px;font-size:12px;cursor:pointer;border:1px solid #e5e7eb;background:#fff;color:#374151;display:flex;align-items:center;gap:3px;}
+.tb-btn.on{background:#4f46e5;color:#fff;border-color:#4f46e5;}
+.pg-ctrl{display:flex;align-items:center;gap:6px;padding-left:10px;border-left:1px solid #e5e7eb;}
+.pg-btn{width:26px;height:26px;border:1px solid #e5e7eb;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6b7280;background:#fff;font-size:13px;user-select:none;}
+.pg-btn:hover{background:#f9fafb;}
+.pg-ind{font-size:12px;font-weight:500;color:#374151;}
+.demo-tag{background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid #fde68a;}
+
+/* ── SLIDE VIEWPORT (vertical scroll) ─────── */
+.slide-viewport{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.slides{display:flex;flex-direction:column;gap:14px;padding:18px 22px;overflow-y:auto;overflow-x:hidden;flex:1;}
+.slides::-webkit-scrollbar{width:5px;}
+.slides::-webkit-scrollbar-track{background:#e5e7eb;border-radius:3px;}
+.slides::-webkit-scrollbar-thumb{background:#9ca3af;border-radius:3px;}
+
+.slide-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);width:100%;display:flex;flex-direction:column;transition:box-shadow .2s;}
+.slide-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.slide-hd{padding:6px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;}
+.slide-pg{font-size:10px;color:#9ca3af;}
+.slide-body{padding:22px 28px;}
+.slide-body::-webkit-scrollbar{width:3px;}
+.slide-body::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
+.title-bar{background:#1e3a8a;color:#fff;padding:9px 14px;border-radius:5px;font-size:14px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;}
+.title-bar.green{background:#065f46;}
+.s-text{font-size:13px;color:#374151;line-height:1.75;}
+.s-text h3{font-size:14px;color:#1e3a8a;margin-bottom:6px;margin-top:14px;font-weight:700;}
+.s-text ul{list-style:none;padding-left:0;}
+.s-text ul li{padding:3px 0 3px 18px;position:relative;}
+.s-text ul li::before{content:"■";color:#4f46e5;position:absolute;left:0;font-size:7px;top:8px;}
+.slide-ft{padding:6px 14px;background:#1e3a8a;display:flex;justify-content:space-between;}
+.slide-ft span{font-size:9px;color:rgba(255,255,255,.65);}
+
+/* Nav arrows – hidden in vertical mode */
+.slide-nav{display:none;}
+
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,-48%)}to{opacity:1;transform:translate(-50%,-50%)}}
+
+/* highlight demo */
+.hl{background:#fef9c3;border-bottom:2px solid #eab308;cursor:pointer;padding:1px 0;border-radius:2px;}
+.hl:hover{background:#fde68a;}
+
+/* ── FEATURE 1 – Quiz CTA full-width ────── */
+.quiz-cta{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:10px;padding:22px;text-align:center;color:#fff;width:100%;}
+.quiz-cta-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+.quiz-cta-sub{font-size:12px;opacity:.85;margin-bottom:14px;}
+.btn-gen-quiz{background:#fff;color:#4f46e5;border:none;padding:10px 22px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:transform .15s,box-shadow .15s;}
+.btn-gen-quiz:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.new-tag{background:linear-gradient(90deg,#4f46e5,#7c3aed);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;}
+
+/* quiz box – modal overlay */
+.quiz-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:499;}
+.quiz-backdrop.show{display:block;}
+.quiz-box{background:#fff;border-radius:12px;padding:20px;border:2px solid #4f46e5;display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;max-height:82vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:500;}
+.quiz-box.show{display:block;animation:fadeUp .3s ease;}
+.quiz-box-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.quiz-box-title{font-size:14px;font-weight:700;color:#111;}
+.quiz-close{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:17px;line-height:1;}
+.quiz-q{margin-bottom:16px;padding:14px;background:#f9fafb;border-radius:7px;}
+.q-num{font-size:11px;color:#9ca3af;margin-bottom:4px;}
+.q-text{font-size:13px;font-weight:600;color:#111;margin-bottom:10px;}
+.q-opts{display:flex;flex-direction:column;gap:6px;}
+.opt{padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:7px;cursor:pointer;font-size:12px;color:#374151;display:flex;align-items:center;gap:8px;transition:all .15s;}
+.opt:hover{border-color:#4f46e5;background:#eef2ff;color:#4f46e5;}
+.opt.sel{border-color:#4f46e5;background:#eef2ff;color:#4f46e5;}
+.opt.ok{border-color:#10b981;background:#ecfdf5;color:#059669;}
+.opt.no{border-color:#ef4444;background:#fef2f2;color:#dc2626;}
+.opt-lbl{width:22px;height:22px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.opt.sel .opt-lbl{background:#4f46e5;color:#fff;}
+.opt.ok .opt-lbl{background:#10b981;color:#fff;}
+.opt.no .opt-lbl{background:#ef4444;color:#fff;}
+.q-fb{display:none;margin-top:7px;padding:8px 12px;border-radius:5px;font-size:12px;}
+.q-fb.ok{background:#ecfdf5;color:#059669;border-left:3px solid #10b981;display:block;}
+.q-fb.no{background:#fef2f2;color:#dc2626;border-left:3px solid #ef4444;display:block;}
+.submit-btn{background:#4f46e5;color:#fff;border:none;padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;}
+.submit-btn:hover{background:#4338ca;}
+#quizResult{font-size:14px;font-weight:600;}
+
+/* ── TUTOR PANEL ─────────────────────────── */
+.tutor{width:375px;background:#fff;display:flex;flex-direction:column;border-left:1px solid #e5e7eb;flex-shrink:0;}
+.t-hd{padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;}
+.t-av{width:34px;height:34px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;}
+.t-name{font-size:13px;font-weight:600;color:#111;}
+.t-status{font-size:10px;color:#10b981;display:flex;align-items:center;gap:3px;}
+.t-dot{width:5px;height:5px;background:#10b981;border-radius:50%;}
+.t-hd-icons{display:flex;gap:6px;align-items:center;}
+.ico-btn{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9ca3af;border:1px solid #e5e7eb;font-size:13px;}
+.ico-btn:hover{background:#f9fafb;}
+.pg-tag{font-size:10px;color:#9ca3af;}
+
+.quota{padding:7px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:7px;}
+.q-lbl{font-size:11px;color:#6b7280;}
+.q-track{flex:1;height:3px;background:#e5e7eb;border-radius:2px;overflow:hidden;}
+.q-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:2px;}
+.q-cnt{font-size:11px;font-weight:600;color:#374151;}
+.byok{background:#fef3c7;color:#b45309;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;}
+
+.chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ctx-lbl{font-size:10px;color:#9ca3af;background:#f9fafb;padding:3px 8px;border-radius:3px;text-align:center;border:1px solid #e5e7eb;align-self:center;}
+.msg-u{align-self:flex-end;max-width:82%;}
+.msg-u-bbl{background:#4f46e5;color:#fff;padding:9px 12px;border-radius:12px 12px 3px 12px;font-size:12px;line-height:1.5;}
+.msg-a{align-self:flex-start;max-width:96%;}
+.msg-a-bbl{background:#f9fafb;border:1px solid #e5e7eb;padding:11px 12px;border-radius:3px 12px 12px 12px;font-size:12px;line-height:1.65;color:#374151;}
+.conf-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.c-track{flex:1;height:3px;background:#e5e7eb;border-radius:2px;overflow:hidden;}
+.c-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#eab308);border-radius:2px;}
+.c-lbl{font-size:10px;color:#9ca3af;}
+.c-badge{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600;}
+.c-badge.med{background:#fef3c7;color:#b45309;}
+.c-badge.rep{background:#ecfdf5;color:#059669;}
+.fb-row{display:flex;align-items:center;gap:6px;margin-top:5px;}
+.fb-lbl{font-size:10px;color:#9ca3af;}
+.fb-btn{width:22px;height:22px;border-radius:3px;border:1px solid #e5e7eb;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;background:#fff;color:#9ca3af;transition:all .15s;}
+.fb-btn:hover,.fb-btn.on{border-color:#4f46e5;color:#4f46e5;background:#eef2ff;}
+
+/* ── FEATURE 2 – action buttons ─────────── */
+.act-btns{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
+.act-btn{padding:5px 10px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid;display:flex;align-items:center;gap:4px;transition:all .15s;}
+.act-quiz{border-color:#4f46e5;color:#4f46e5;background:#eef2ff;}
+.act-quiz:hover,.act-quiz.active{background:#4f46e5;color:#fff;}
+.act-ex{border-color:#059669;color:#059669;background:#ecfdf5;}
+.act-ex:hover,.act-ex.active{background:#059669;color:#fff;}
+.act-btn:disabled{opacity:.6;cursor:not-allowed;}
+
+/* inline quiz */
+.i-quiz{margin-top:8px;background:#fff;border:1.5px solid #4f46e5;border-radius:8px;padding:12px;display:none;}
+.i-quiz.show{display:block;animation:fadeUp .3s ease;}
+.i-quiz-title{font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:8px;display:flex;align-items:center;gap:4px;}
+.i-quiz-q{font-size:12px;font-weight:600;color:#111;margin-bottom:7px;}
+.i-opts{display:flex;flex-direction:column;gap:4px;}
+.i-opt{padding:6px 9px;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;font-size:11px;color:#374151;display:flex;align-items:center;gap:6px;transition:all .15s;}
+.i-opt:hover{border-color:#4f46e5;background:#eef2ff;}
+.i-opt.ok{border-color:#10b981;background:#ecfdf5;color:#059669;pointer-events:none;}
+.i-opt.no{border-color:#ef4444;background:#fef2f2;color:#dc2626;pointer-events:none;}
+.i-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid currentColor;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.i-opt.ok .i-dot{background:#10b981;border-color:#10b981;color:#fff;}
+.i-opt.no .i-dot{background:#ef4444;border-color:#ef4444;color:#fff;}
+
+/* inline example */
+.i-ex{margin-top:8px;background:#fff;border:1.5px solid #059669;border-radius:8px;padding:12px;display:none;}
+.i-ex.show{display:block;animation:fadeUp .3s ease;}
+.i-ex-title{font-size:11px;font-weight:700;color:#059669;margin-bottom:7px;}
+.i-ex-body{font-size:11px;color:#374151;line-height:1.6;}
+.i-ex-block{background:#f0fdf4;border-left:3px solid #10b981;border-radius:4px;padding:9px;margin-top:6px;}
+.i-ex-block strong{color:#059669;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
+
+/* typing */
+.typing{display:flex;gap:4px;padding:4px 0;}
+.td{width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:bounce 1.1s infinite;}
+.td:nth-child(2){animation-delay:.15s;}
+.td:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* input */
+.chat-input-area{padding:10px 14px;border-top:1px solid #e5e7eb;background:#fff;}
+.inp-wrap{display:flex;align-items:center;gap:7px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:9px;padding:7px 10px;}
+.inp{flex:1;border:none;background:transparent;font-size:12px;color:#374151;outline:none;}
+.inp::placeholder{color:#9ca3af;}
+.send{width:28px;height:28px;background:#4f46e5;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:13px;border:none;}
+.send:hover{background:#4338ca;}
+.inp-hint{text-align:center;margin-top:5px;font-size:9px;color:#9ca3af;}
+
+/* toast */
+.toast{position:fixed;top:16px;right:16px;background:#111;color:#fff;padding:9px 14px;border-radius:7px;font-size:12px;display:flex;align-items:center;gap:7px;z-index:999;opacity:0;transform:translateY(-8px);transition:all .25s;max-width:280px;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:#f1f5f9;}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-v">V</div>
+    <span class="logo-t">VLearn</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-label">HỌC LIỆU MÔN HỌC</div>
+    <div class="day-row"><span>📅</span>Day 1<span class="day-badge">2</span></div>
+    <div class="day-row"><span>📅</span>Day 2<span class="day-badge">1</span></div>
+    <div class="day-row"><span>📅</span>Day 3<span class="day-badge">2</span></div>
+    <div class="day-row" id="day4-row" onclick="toggleDay('day4')"><span>📅</span>Day 4<span class="day-badge">3</span><span id="day4-arrow" style="margin-left:2px;font-size:9px;color:#5a5a8a;">›</span></div>
+    <div id="day4-files" style="display:none">
+      <div class="file-row" onclick="switchDay('day4','day04-vibe-coding.pdf','COMP2010 · day04')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day04-vibe-coding.pdf</span>
+      </div>
+      <div class="file-row" onclick="switchDay('day4','day04-prompt-engineering.pdf','COMP2010 · day04')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day04-prompt-engineering.pdf</span>
+      </div>
+      <div class="file-row" onclick="switchDay('day4','day04-llm-evaluation.pdf','COMP2010 · day04')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day04-llm-evaluation.pdf</span>
+      </div>
+    </div>
+    <div class="day-row" id="day5-row" onclick="toggleDay('day5')"><span>📅</span>Day 5<span class="day-badge">3</span><span id="day5-arrow" style="margin-left:2px;font-size:9px;color:#5a5a8a;">›</span></div>
+    <div id="day5-files" style="display:none">
+      <div class="file-row" onclick="switchDay('day5','day05-ai-product-spec.pdf','COMP2010 · day05')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day05-ai-product-spec.pdf</span>
+      </div>
+      <div class="file-row" onclick="switchDay('day5','day05-user-research.pdf','COMP2010 · day05')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day05-user-research.pdf</span>
+      </div>
+      <div class="file-row" onclick="switchDay('day5','day05-golden-set.pdf','COMP2010 · day05')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day05-golden-set.pdf</span>
+      </div>
+    </div>
+    <div class="day-row active" id="day6-row" onclick="toggleDay('day6')"><span>📅</span>Day 6<span class="day-badge on">1</span><span id="day6-arrow" style="margin-left:2px;font-size:9px;color:#a0a0c0;">▾</span></div>
+    <div id="day6-files">
+      <div class="file-row active" id="file-day6" onclick="switchDay('day6','day06-ai-product-project-management.pdf','COMP2010 · Lecture_material_ms204yc9_gxpg9y')">
+        <span>📄</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">day06-ai-product-project...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<!-- MODAL BACKDROP -->
+<div class="quiz-backdrop" id="quizBackdrop" onclick="closeAllQuiz()"></div>
+
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="pg-btn" style="font-size:16px;">‹</div>
+      <div>
+        <div class="doc-title" id="topDocTitle">day06-ai-product-project-management.pdf</div>
+        <div class="doc-sub" id="topDocSub">COMP2010 · Lecture_material_ms204yc9_gxpg9y</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="tb-btn on">📖 Đọc</button>
+      <button class="tb-btn">✏️ Bút</button>
+      <button class="tb-btn">🖊️ Highlight</button>
+      <div class="pg-ctrl">
+        <div class="pg-btn" onclick="prevPg()">‹</div>
+        <div class="pg-ind">Trang <span id="curPg">5</span> · 1 note</div>
+        <div class="pg-btn" onclick="nextPg()">›</div>
+      </div>
+      <span class="demo-tag">✨ DEMO – Hackathon</span>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE VIEWPORT ══ -->
+  <div class="slide-viewport">
+    <div class="slide-nav prev" onclick="scrollSlides('prev')">‹</div>
+    <div class="slide-nav next" onclick="scrollSlides('next')">›</div>
+
+  <!-- ══ PANEL DAY 4 ══ -->
+  <div id="slideDay4" style="display:none;flex:1;flex-direction:column;gap:14px;padding:18px 22px;overflow-y:auto;overflow-x:hidden;">
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 1 / 28</span><span class="slide-pg">day04-vibe-coding.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#7c3aed;"><span>Vibe Coding với AI</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>Vibe Coding là gì?</h3>
+          <p style="margin-bottom:10px;">Lập trình bằng ngôn ngữ tự nhiên — AI hiểu ý định và tự sinh code phù hợp.</p>
+          <ul>
+            <li>🗣️ <strong>Mô tả ý định</strong> thay vì viết syntax</li>
+            <li>🔄 <strong>Iterate nhanh</strong> — thử, sửa, chạy lại trong giây</li>
+            <li>🧠 <strong>Focus vào logic</strong> — không cần nhớ API chi tiết</li>
+            <li>🤝 <strong>Pair with AI</strong> — Cursor, Claude Code, GitHub Copilot</li>
+          </ul>
+          <p style="margin-top:14px;">
+            <span class="hl" onclick="hlAsk(this)">Vibe-coding rule: dùng AI thoải mái, nhưng không giải thích được phần có tên mình thì phần đó 0 điểm.</span>
+            <br><span style="font-size:10px;color:#9ca3af;">💡 Bôi đen để hỏi AI →</span>
+          </p>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#7c3aed;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 4</span><span>Tuần 1 · 1/28</span></div>
+    </div>
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 2 / 28</span><span class="slide-pg">day04-vibe-coding.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#7c3aed;"><span>Tool Stack cho Vibe Coding</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>Chọn tool theo sức nhóm</h3>
+          <ul>
+            <li>🎨 <strong>v0.dev</strong> — UI đẹp nhanh, không cần code</li>
+            <li>⚡ <strong>Lovable / Bolt.new</strong> — nhóm không dev, đăng ký free TRƯỚC</li>
+            <li>✏️ <strong>Figma Make</strong> — nhóm mạnh design</li>
+            <li>🤖 <strong>Claude Code / Cursor</strong> — nhóm kỹ thuật</li>
+          </ul>
+          <div style="margin-top:14px;padding:10px;background:#f3f0ff;border-radius:7px;border-left:3px solid #7c3aed;font-size:12px;">
+            <strong style="color:#7c3aed;">⚠️ Luật an toàn:</strong> Không commit API key · Chỉ dùng data giả · Soát repo trước khi push
+          </div>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#7c3aed;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 4</span><span>Tuần 1 · 2/28</span></div>
+    </div>
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 3 / 28 · <strong>Slide cuối</strong></span><span class="slide-pg">day04-vibe-coding.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#6d28d9;"><span>CP2 – Build Prototype</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <ul>
+            <li>Chọn 1 tool và build flow chính demo được trong 5 phút</li>
+            <li>Sketch / Mock — chưa cần AI thật, chỉ cần flow thông</li>
+            <li>Commit đầu tiên lên repo nhóm trước 12:00</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#6d28d9;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 4</span><span>Tuần 1 · 3/28</span></div>
+    </div>
+    <!-- Quiz CTA Day 4 -->
+    <div class="quiz-cta show" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">
+      <div style="font-size:22px;margin-bottom:6px;">🎯</div>
+      <div class="quiz-cta-title">Bạn đã đọc hết slide Day 4!</div>
+      <div class="quiz-cta-sub">Kiểm tra nhanh về Vibe Coding &amp; Tool Stack</div>
+      <button class="btn-gen-quiz" onclick="genD4Quiz(this)">✨ Tạo Quiz cho Day 4</button>
+      <div style="font-size:10px;opacity:.7;margin-top:9px;"><span class="new-tag">✨ Tính năng mới</span></div>
+    </div>
+    <div class="quiz-box" id="d4QuizBox">
+      <div class="quiz-box-hd">
+        <div><div class="quiz-box-title">🎯 Quiz: Vibe Coding Day 4</div><div style="font-size:11px;color:#9ca3af;">3 câu hỏi nhanh</div></div>
+        <button class="quiz-close" onclick="closeAllQuiz()">✕</button>
+      </div>
+      <div class="quiz-q"><div class="q-num">Câu 1 / 3</div><div class="q-text">Vibe-coding rule trong hackathon là gì?</div>
+        <div class="q-opts" id="d4q1o">
+          <div class="opt" onclick="pickOpt(this,'d4q1',false)"><div class="opt-lbl">A</div>Dùng AI càng nhiều càng tốt</div>
+          <div class="opt" onclick="pickOpt(this,'d4q1',true)"><div class="opt-lbl">B</div>Dùng AI thoải mái nhưng phải giải thích được phần có tên mình</div>
+          <div class="opt" onclick="pickOpt(this,'d4q1',false)"><div class="opt-lbl">C</div>Không dùng AI khi code</div>
+        </div><div class="q-fb" id="d4q1f"></div>
+      </div>
+      <div class="quiz-q"><div class="q-num">Câu 2 / 3</div><div class="q-text">Tool nào phù hợp cho nhóm không có background dev?</div>
+        <div class="q-opts" id="d4q2o">
+          <div class="opt" onclick="pickOpt(this,'d4q2',false)"><div class="opt-lbl">A</div>Claude Code</div>
+          <div class="opt" onclick="pickOpt(this,'d4q2',true)"><div class="opt-lbl">B</div>Lovable / Bolt.new</div>
+          <div class="opt" onclick="pickOpt(this,'d4q2',false)"><div class="opt-lbl">C</div>Cursor</div>
+        </div><div class="q-fb" id="d4q2f"></div>
+      </div>
+      <div class="quiz-q" style="margin-bottom:0"><div class="q-num">Câu 3 / 3</div><div class="q-text">Luật an toàn quan trọng nhất khi push repo public?</div>
+        <div class="q-opts" id="d4q3o">
+          <div class="opt" onclick="pickOpt(this,'d4q3',false)"><div class="opt-lbl">A</div>Viết README đầy đủ</div>
+          <div class="opt" onclick="pickOpt(this,'d4q3',false)"><div class="opt-lbl">B</div>Có unit test</div>
+          <div class="opt" onclick="pickOpt(this,'d4q3',true)"><div class="opt-lbl">C</div>Không commit API key / .env</div>
+        </div><div class="q-fb" id="d4q3f"></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+        <button class="submit-btn" id="d4SubmitBtn" onclick="submitD4Quiz()">Nộp bài ✓</button>
+        <div id="d4QuizResult" style="display:none;font-size:13px;font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL DAY 5 ══ -->
+  <div id="slideDay5" style="display:none;flex:1;flex-direction:column;gap:14px;padding:18px 22px;overflow-y:auto;overflow-x:hidden;">
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 1 / 32</span><span class="slide-pg">day05-ai-product-spec.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#0f766e;"><span>Viết AI Spec – Evidence &amp; Impact</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>§1 User &amp; Job</h3>
+          <ul>
+            <li>📌 <strong>Job executor</strong> — một vai cụ thể, không phải "học viên nói chung"</li>
+            <li>📝 <strong>Core JTBD</strong> — verb + object + bối cảnh, không có tên AI</li>
+            <li>🔍 <strong>Problem statement</strong> — KHÔNG có chữ AI</li>
+            <li>📊 <strong>Evidence</strong> — số đếm được hoặc khảo sát ≥20 người</li>
+          </ul>
+          <p style="margin-top:14px;">
+            <span class="hl" onclick="hlAsk(this)">Evidence đường B: số mining đếm được + ≥5 ví dụ nguyên văn + phương pháp đếm kiểm lại được.</span>
+            <br><span style="font-size:10px;color:#9ca3af;">💡 Bôi đen để hỏi AI →</span>
+          </p>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#0f766e;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 5</span><span>Tuần 1 · 1/32</span></div>
+    </div>
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 2 / 32</span><span class="slide-pg">day05-ai-product-spec.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#0f766e;"><span>§4 Thiết kế – Lát Cắt &amp; Automation</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>Lát cắt = MỘT CÂU</h3>
+          <div style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:7px;padding:12px;margin-bottom:14px;font-size:12px;">
+            <strong>Công thức:</strong> 1 user · 1 việc · 1 quyết định AI · 1 kết quả
+          </div>
+          <h3>3 mức Automation</h3>
+          <ul>
+            <li>🤝 <strong>Augment</strong> — AI gợi ý, người quyết (sai thì đắt)</li>
+            <li>⚡ <strong>Conditional</strong> — AI tự làm case chắc, chuyển người case mơ hồ</li>
+            <li>🤖 <strong>Automate</strong> — AI tự làm (sai thì rẻ, user tự thấy)</li>
+          </ul>
+          <p style="margin-top:12px;">
+            <span class="hl" onclick="hlAsk(this)">Lý do chọn mức automation phải viết theo cost-of-error: sai thì ai chịu gì, sửa đắt hay rẻ.</span>
+            <br><span style="font-size:10px;color:#9ca3af;">💡 Bôi đen để hỏi AI →</span>
+          </p>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#0f766e;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 5</span><span>Tuần 1 · 2/32</span></div>
+    </div>
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 3 / 32 · <strong>Slide cuối</strong></span><span class="slide-pg">day05-ai-product-spec.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar" style="background:#065f46;"><span>§7 Golden Set &amp; Quality Bar</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3 style="color:#065f46;">Cấu trúc Golden Set ≥20 case</h3>
+          <ul>
+            <li>≥2 case mỗi lớp chỗ khó (4 lớp × 2 = ≥8 case)</li>
+            <li>8-10 case thường (happy path)</li>
+            <li>2-4 case hiếm / edge case</li>
+            <li>≥10 case lấy hoặc phát triển từ chatlog thật</li>
+          </ul>
+          <div style="margin-top:14px;padding:10px;background:#f0fdf4;border-radius:7px;border-left:4px solid #10b981;font-size:12px;">
+            <strong style="color:#059669;">Quality bar (chốt trước 23:59 N1):</strong><br>
+            "Đạt khi ≥ ___% qua bộ, và [điều kiện cứng]" — sau khi chốt không được thay đổi.
+          </div>
+        </div>
+      </div>
+      <div class="slide-ft" style="background:#065f46;"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 5</span><span>Tuần 1 · 3/32</span></div>
+    </div>
+    <!-- Quiz CTA Day 5 -->
+    <div class="quiz-cta show" style="background:linear-gradient(135deg,#0f766e,#065f46);">
+      <div style="font-size:22px;margin-bottom:6px;">🎯</div>
+      <div class="quiz-cta-title">Bạn đã đọc hết slide Day 5!</div>
+      <div class="quiz-cta-sub">Kiểm tra nhanh về AI Spec &amp; Golden Set</div>
+      <button class="btn-gen-quiz" onclick="genD5Quiz(this)">✨ Tạo Quiz cho Day 5</button>
+      <div style="font-size:10px;opacity:.7;margin-top:9px;"><span class="new-tag">✨ Tính năng mới</span></div>
+    </div>
+    <div class="quiz-box" id="d5QuizBox">
+      <div class="quiz-box-hd">
+        <div><div class="quiz-box-title">🎯 Quiz: AI Spec Day 5</div><div style="font-size:11px;color:#9ca3af;">3 câu hỏi nhanh</div></div>
+        <button class="quiz-close" onclick="closeAllQuiz()">✕</button>
+      </div>
+      <div class="quiz-q"><div class="q-num">Câu 1 / 3</div><div class="q-text">Lát cắt theo đúng format gồm mấy phần?</div>
+        <div class="q-opts" id="d5q1o">
+          <div class="opt" onclick="pickOpt(this,'d5q1',false)"><div class="opt-lbl">A</div>2 phần</div>
+          <div class="opt" onclick="pickOpt(this,'d5q1',false)"><div class="opt-lbl">B</div>3 phần</div>
+          <div class="opt" onclick="pickOpt(this,'d5q1',true)"><div class="opt-lbl">C</div>4 phần: 1 user · 1 việc · 1 quyết định AI · 1 kết quả</div>
+        </div><div class="q-fb" id="d5q1f"></div>
+      </div>
+      <div class="quiz-q"><div class="q-num">Câu 2 / 3</div><div class="q-text">Golden set cần tối thiểu bao nhiêu case?</div>
+        <div class="q-opts" id="d5q2o">
+          <div class="opt" onclick="pickOpt(this,'d5q2',false)"><div class="opt-lbl">A</div>10 case</div>
+          <div class="opt" onclick="pickOpt(this,'d5q2',true)"><div class="opt-lbl">B</div>20 case</div>
+          <div class="opt" onclick="pickOpt(this,'d5q2',false)"><div class="opt-lbl">C</div>50 case</div>
+        </div><div class="q-fb" id="d5q2f"></div>
+      </div>
+      <div class="quiz-q" style="margin-bottom:0"><div class="q-num">Câu 3 / 3</div><div class="q-text">Quality bar được chốt khi nào và có thể thay đổi sau không?</div>
+        <div class="q-opts" id="d5q3o">
+          <div class="opt" onclick="pickOpt(this,'d5q3',false)"><div class="opt-lbl">A</div>Chốt sau demo, có thể thay đổi</div>
+          <div class="opt" onclick="pickOpt(this,'d5q3',true)"><div class="opt-lbl">B</div>Chốt trước 23:59 N1, KHÔNG thay đổi sau đó</div>
+          <div class="opt" onclick="pickOpt(this,'d5q3',false)"><div class="opt-lbl">C</div>Chốt khi submit bài</div>
+        </div><div class="q-fb" id="d5q3f"></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+        <button class="submit-btn" id="d5SubmitBtn" onclick="submitD5Quiz()">Nộp bài ✓</button>
+        <div id="d5QuizResult" style="display:none;font-size:13px;font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDES Day 6 -->
+  <div class="slides" id="slidesWrap">
+
+    <!-- Slide 3 -->
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 3 / 37</span><span class="slide-pg">day06-ai-product-project-management.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar"><span>AI Product Life Cycle</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>Các giai đoạn phát triển sản phẩm AI</h3>
+          <ul>
+            <li>🔍 <strong>Problem Scoping</strong> — Xác định bài toán & người dùng</li>
+            <li>📊 <strong>Data Review</strong> — Kiểm tra dữ liệu có sẵn</li>
+            <li>📐 <strong>Baseline</strong> — Thiết lập chỉ số cơ sở</li>
+            <li>🔨 <strong>Build &amp; Evaluate</strong> — Xây dựng và đo lường</li>
+            <li>🚀 <strong>Deploy &amp; Monitor</strong> — Triển khai và giám sát</li>
+          </ul>
+          <p style="margin-top:14px;font-size:12px;color:#6b7280;">
+            Tại mỗi giai đoạn cần có <span class="hl" onclick="hlAsk(this)"><strong>cổng đánh giá (go / no-go)</strong></span> để quyết định có đi tiếp hay không.
+            <br><span style="font-size:10px;color:#9ca3af;">💡 Thử bôi đen đoạn trên để hỏi AI →</span>
+          </p>
+        </div>
+      </div>
+      <div class="slide-ft"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 6</span><span>Tuần 1 · 3/25</span></div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 4 / 37</span><span class="slide-pg">day06-ai-product-project-management.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar"><span>Problem Statement Framework</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3>Viết Problem Statement hiệu quả</h3>
+          <p style="margin-bottom:10px;">Một problem statement tốt phải trả lời được 4 câu hỏi:</p>
+          <ul>
+            <li><strong>Who</strong> — Ai là người bị ảnh hưởng?</li>
+            <li><strong>What</strong> — Vấn đề cụ thể là gì?</li>
+            <li><strong>When</strong> — Xảy ra trong bối cảnh nào?</li>
+            <li><strong>Impact</strong> — Hậu quả nếu không giải quyết?</li>
+          </ul>
+          <p style="margin-top:12px;">
+            Ví dụ: <span class="hl" onclick="hlAsk(this)">"Học viên đang học tài liệu AI không biết mình hiểu đúng hay sai, dẫn đến phải mất 3-5 phút tự kiểm tra lại."</span>
+            <br><span style="font-size:10px;color:#9ca3af;">💡 Thử bôi đen đoạn trên để hỏi AI →</span>
+          </p>
+        </div>
+      </div>
+      <div class="slide-ft"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 6</span><span>Tuần 1 · 4/25</span></div>
+    </div>
+
+    <!-- Slide 5 (Deliverable) -->
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 5 / 37</span><span class="slide-pg">day06-ai-product-project-management.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar"><span>Deliverable Cuối Ngày</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <div style="border:2px solid #3b82f6;border-radius:7px;padding:14px;margin-bottom:14px;background:#eff6ff;">
+            <strong style="color:#1e40af;font-size:13px;">PRD final + ROI spreadsheet / model + stakeholder slide deck + 5 phút pitch rehearsal</strong>
+          </div>
+          <ul>
+            <li>Dùng lại product đã xác lập ở Day 05</li>
+            <li>ROI phải có kịch bản <strong>conservative / realistic / optimistic</strong></li>
+            <li>Pitch deck phải đủ rõ cho stakeholder quyết định <span class="hl" onclick="hlAsk(this)"><strong>go / pilot / no-go</strong></span></li>
+          </ul>
+          <p style="font-size:10px;color:#9ca3af;margin-top:8px;">💡 Thử bôi đen đoạn trên để hỏi AI →</p>
+        </div>
+      </div>
+      <div class="slide-ft"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 6</span><span>Tuần 1 · 5/25</span></div>
+    </div>
+
+    <!-- Slide 6 – LAST -->
+    <div class="slide-card">
+      <div class="slide-hd"><span class="slide-pg">Trang 6 / 37 &nbsp;·&nbsp; <strong>Slide cuối</strong></span><span class="slide-pg">day06-ai-product-project-management.pdf</span></div>
+      <div class="slide-body">
+        <div class="title-bar green"><span>Tóm tắt &amp; Bước tiếp theo</span><span style="font-size:11px;opacity:.65;">VinUniversity</span></div>
+        <div class="s-text">
+          <h3 style="color:#065f46;">Những điểm cần nhớ hôm nay</h3>
+          <ul>
+            <li>Problem-first thinking: xác định đúng vấn đề trước khi code</li>
+            <li>AI Product Life Cycle có 6 giai đoạn rõ ràng</li>
+            <li>Mỗi giai đoạn cần cổng đánh giá go / no-go</li>
+            <li>ROI cần 3 kịch bản: conservative, realistic, optimistic</li>
+          </ul>
+          <div style="margin-top:16px;padding:12px;background:#f0fdf4;border-radius:7px;border-left:4px solid #10b981;font-size:12px;">
+            <strong style="color:#059669;">Nộp trước 23:59 hôm nay:</strong><br>
+            PRD + ROI Model + Slide Deck (max 10 slide) + Demo video 2 phút
+          </div>
+        </div>
+      </div>
+      <div class="slide-ft"><span>Giảng viên (VinUni)</span><span>AICB · Ngày 6</span><span>Tuần 1 · 6/25</span></div>
+    </div>
+
+    <!-- ═══ FEATURE 1: Quiz CTA card – last in row ═══ -->
+    <div class="quiz-cta" id="quizCta">
+      <div style="font-size:22px;margin-bottom:6px;">🎯</div>
+      <div class="quiz-cta-title">Bạn đã đọc hết slide rồi!</div>
+      <div class="quiz-cta-sub">Kiểm tra mức độ hiểu bài với quiz AI tạo tự động từ nội dung Day 6</div>
+      <button class="btn-gen-quiz" onclick="genSlideQuiz()">✨ Tạo Quiz cho toàn bộ slide</button>
+      <div style="font-size:10px;opacity:.7;margin-top:9px;"><span class="new-tag">✨ Tính năng mới</span> AI phân tích nội dung và tạo câu hỏi phù hợp</div>
+    </div>
+
+    <!-- Quiz box -->
+    <div class="quiz-box" id="quizBox">
+      <div class="quiz-box-hd">
+        <div>
+          <div class="quiz-box-title">🎯 Quiz: AI Product Management Day 6</div>
+          <div style="font-size:11px;color:#9ca3af;" id="quizMeta">5 câu hỏi · Được tạo tự động từ nội dung slide</div>
+        </div>
+        <button class="quiz-close" onclick="closeAllQuiz()">✕</button>
+      </div>
+
+      <!-- Q1 -->
+      <div class="quiz-q">
+        <div class="q-num">Câu 1 / 5</div>
+        <div class="q-text">AI Product Life Cycle bao gồm bao nhiêu giai đoạn chính?</div>
+        <div class="q-opts" id="q1o">
+          <div class="opt" onclick="pickOpt(this,'q1',false)"><div class="opt-lbl">A</div>3 giai đoạn</div>
+          <div class="opt" onclick="pickOpt(this,'q1',false)"><div class="opt-lbl">B</div>4 giai đoạn</div>
+          <div class="opt" onclick="pickOpt(this,'q1',true)"><div class="opt-lbl">C</div>6 giai đoạn</div>
+          <div class="opt" onclick="pickOpt(this,'q1',false)"><div class="opt-lbl">D</div>8 giai đoạn</div>
+        </div>
+        <div class="q-fb" id="q1f"></div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="quiz-q">
+        <div class="q-num">Câu 2 / 5</div>
+        <div class="q-text">ROI cần được tính theo bao nhiêu kịch bản?</div>
+        <div class="q-opts" id="q2o">
+          <div class="opt" onclick="pickOpt(this,'q2',false)"><div class="opt-lbl">A</div>1 kịch bản (realistic)</div>
+          <div class="opt" onclick="pickOpt(this,'q2',false)"><div class="opt-lbl">B</div>2 kịch bản</div>
+          <div class="opt" onclick="pickOpt(this,'q2',true)"><div class="opt-lbl">C</div>3 kịch bản: conservative / realistic / optimistic</div>
+          <div class="opt" onclick="pickOpt(this,'q2',false)"><div class="opt-lbl">D</div>5 kịch bản</div>
+        </div>
+        <div class="q-fb" id="q2f"></div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="quiz-q">
+        <div class="q-num">Câu 3 / 5</div>
+        <div class="q-text">Stakeholder cần pitch deck đủ rõ để quyết định điều gì?</div>
+        <div class="q-opts" id="q3o">
+          <div class="opt" onclick="pickOpt(this,'q3',false)"><div class="opt-lbl">A</div>Buy / Sell / Hold</div>
+          <div class="opt" onclick="pickOpt(this,'q3',true)"><div class="opt-lbl">B</div>Go / Pilot / No-go</div>
+          <div class="opt" onclick="pickOpt(this,'q3',false)"><div class="opt-lbl">C</div>Accept / Reject / Pending</div>
+          <div class="opt" onclick="pickOpt(this,'q3',false)"><div class="opt-lbl">D</div>Start / Stop / Continue</div>
+        </div>
+        <div class="q-fb" id="q3f"></div>
+      </div>
+
+      <!-- Q4 -->
+      <div class="quiz-q">
+        <div class="q-num">Câu 4 / 5</div>
+        <div class="q-text">Giai đoạn nào đặt câu hỏi "vấn đề có đáng giải không"?</div>
+        <div class="q-opts" id="q4o">
+          <div class="opt" onclick="pickOpt(this,'q4',true)"><div class="opt-lbl">A</div>Problem Scoping</div>
+          <div class="opt" onclick="pickOpt(this,'q4',false)"><div class="opt-lbl">B</div>Baseline</div>
+          <div class="opt" onclick="pickOpt(this,'q4',false)"><div class="opt-lbl">C</div>Deploy &amp; Monitor</div>
+          <div class="opt" onclick="pickOpt(this,'q4',false)"><div class="opt-lbl">D</div>Build &amp; Evaluate</div>
+        </div>
+        <div class="q-fb" id="q4f"></div>
+      </div>
+
+      <!-- Q5 -->
+      <div class="quiz-q" style="margin-bottom:0;">
+        <div class="q-num">Câu 5 / 5</div>
+        <div class="q-text">Giai đoạn nào giúp xác định chỉ số đo lường hiệu quả model?</div>
+        <div class="q-opts" id="q5o">
+          <div class="opt" onclick="pickOpt(this,'q5',false)"><div class="opt-lbl">A</div>Data Review</div>
+          <div class="opt" onclick="pickOpt(this,'q5',true)"><div class="opt-lbl">B</div>Baseline</div>
+          <div class="opt" onclick="pickOpt(this,'q5',false)"><div class="opt-lbl">C</div>Deploy &amp; Monitor</div>
+          <div class="opt" onclick="pickOpt(this,'q5',false)"><div class="opt-lbl">D</div>Problem Scoping</div>
+        </div>
+        <div class="q-fb" id="q5f"></div>
+      </div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+        <button class="submit-btn" id="submitBtn" onclick="submitQuiz()">Nộp bài ✓</button>
+        <div id="quizResult" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div><!-- /slidesWrap Day 6 -->
+  </div><!-- /slide-viewport -->
+</div><!-- /main -->
+
+<!-- TUTOR PANEL -->
+<div class="tutor">
+  <div class="t-hd">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div class="t-av">🤖</div>
+      <div>
+        <div class="t-name">VLearn Tutor</div>
+        <div class="t-status"><div class="t-dot"></div>Trợ lý học theo ngữ cảnh</div>
+      </div>
+    </div>
+    <div class="t-hd-icons">
+      <div class="ico-btn">↻</div>
+      <div class="ico-btn">+</div>
+      <span class="pg-tag">Trang slide: 5</span>
+    </div>
+  </div>
+
+  <div class="quota">
+    <span class="q-lbl">Quota Tutor trong ngày</span>
+    <div class="q-track"><div class="q-fill" style="width:7%"></div></div>
+    <span class="q-cnt">1 / 15 câu</span>
+    <span class="byok">BYOK</span>
+  </div>
+
+  <div class="chat" id="chatBox">
+    <div class="ctx-lbl">Ngữ cảnh: Slide trang 1</div>
+
+    <!-- AI greeting -->
+    <div class="msg-a">
+      <div class="msg-a-bbl">
+        Xin chào! Mình là <strong>VLearn Tutor</strong>. Bạn có thể bôi đen một đoạn trên slide để hỏi hoặc gửi câu hỏi tự do nhé!
+        <div style="margin-top:7px;padding:5px 9px;background:#eef2ff;border-radius:5px;font-size:10px;color:#4f46e5;border:1px dashed #4f46e5;">
+          <span class="new-tag">✨ Mới</span> Sau khi Tutor trả lời, bạn có thể <strong>Tạo Quiz</strong> hoặc xem <strong>Ví dụ thực tế</strong>!
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-lbl">Ngữ cảnh: Slide trang 7</div>
+
+    <!-- User -->
+    <div class="msg-u"><div class="msg-u-bbl">bài học ở trên là gì</div></div>
+
+    <!-- AI response 1 – with feature 2 buttons (pre-loaded) -->
+    <div class="msg-a">
+      <div class="msg-a-bbl">
+        Chào bạn! Ở <strong>trang 5 slide hiện tại</strong>, bài học tập trung vào <em>Deliverable Cuối Ngày</em> của Day 6.<br><br>
+        📋 Cụ thể bạn cần nộp:<br>
+        <ul style="margin:5px 0 5px 14px;font-size:11px;">
+          <li><strong>PRD final</strong> — tài liệu yêu cầu sản phẩm</li>
+          <li><strong>ROI spreadsheet</strong> — mô hình tính lợi nhuận đầu tư</li>
+          <li><strong>Stakeholder slide deck</strong> — slide trình bày</li>
+          <li><strong>5 phút pitch rehearsal</strong> — luyện thuyết trình</li>
+        </ul>
+        ROI cần có <strong>3 kịch bản</strong>: conservative, realistic và optimistic.
+        <br><br>
+        <span style="font-size:10px;color:#9ca3af;">Rất xin lỗi vì hiện tại tôi không thể truy xuất nội dung cụ thể tại trang 7. Bạn có thể bôi đen đoạn cần hỏi để tôi hỗ trợ rõ hơn?</span>
+      </div>
+      <div class="conf-row">
+        <div class="c-track"><div class="c-fill" style="width:60%"></div></div>
+        <span class="c-lbl">60% · Trung bình</span>
+        <span class="c-badge rep">● ĐÃ TRẢ LỜI</span>
+      </div>
+      <div class="fb-row">
+        <span class="fb-lbl">Phản hồi này có hữu ích không?</span>
+        <button class="fb-btn" onclick="this.classList.toggle('on')">👍</button>
+        <button class="fb-btn" onclick="this.classList.toggle('on')">👎</button>
+      </div>
+
+      <!-- ═══ FEATURE 2: Action buttons ═══ -->
+      <div class="act-btns">
+        <button class="act-btn act-quiz" onclick="toggleIQuiz('iq1','iex1',this)">
+          🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>
+        </button>
+        <button class="act-btn act-ex" onclick="toggleIEx('iex1','iq1',this)">
+          💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>
+        </button>
+      </div>
+
+      <!-- Inline quiz -->
+      <div class="i-quiz" id="iq1">
+        <div class="i-quiz-title">🎯 Quiz nhanh từ câu trả lời</div>
+        <div class="i-quiz-q">Deliverable nào KHÔNG được đề cập trong slide Day 6?</div>
+        <div class="i-opts">
+          <div class="i-opt" onclick="chkIOpt(this,false,'iq1')"><div class="i-dot">A</div>PRD final</div>
+          <div class="i-opt" onclick="chkIOpt(this,false,'iq1')"><div class="i-dot">B</div>ROI spreadsheet</div>
+          <div class="i-opt" onclick="chkIOpt(this,true,'iq1')"><div class="i-dot">C</div>Unit test report</div>
+          <div class="i-opt" onclick="chkIOpt(this,false,'iq1')"><div class="i-dot">D</div>Stakeholder slide deck</div>
+        </div>
+      </div>
+
+      <!-- Inline example -->
+      <div class="i-ex" id="iex1">
+        <div class="i-ex-title">💡 Ví dụ thực tế về Deliverable</div>
+        <div class="i-ex-body">
+          Giả sử bạn đang build tính năng <strong>"Tutor tạo quiz sau câu trả lời"</strong> và cần pitch cho PM:
+          <div class="i-ex-block">
+            <strong>3 kịch bản ROI của bạn:</strong><br>
+            • <strong>Conservative:</strong> 100 user/ngày × 3 phút tiết kiệm = 5h/ngày<br>
+            • <strong>Realistic:</strong> 500 user/ngày → 25h/ngày<br>
+            • <strong>Optimistic:</strong> 1000 user + tăng quiz score 15% → PM quyết định <strong>Pilot</strong> 50 user/tuần
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- placeholder for new messages -->
+    <div id="newMsgs"></div>
+  </div>
+
+  <div class="chat-input-area">
+    <div class="inp-wrap">
+      <input class="inp" id="chatInp" placeholder="Nhập câu hỏi hoặc bôi đen tài liệu..." onkeypress="if(event.key==='Enter')sendMsg()">
+      <button class="send" onclick="sendMsg()">↑</button>
+    </div>
+    <div class="inp-hint">Còn 14 câu hỏi hôm nay · <span style="color:#4f46e5;cursor:pointer;">Xem thêm</span></div>
+  </div>
+</div>
+
+<script>
+// ── Page nav ──────────────────────────────────────────────
+let pg=5;
+function prevPg(){if(pg>1){pg--;document.getElementById('curPg').textContent=pg;}}
+function nextPg(){if(pg<37){pg++;document.getElementById('curPg').textContent=pg;}}
+
+// ── Horizontal slide scroll nav ───────────────────────────
+function getActiveSlides(){
+  const panels=['slidesWrap','slideDay4','slideDay5'];
+  for(const id of panels){
+    const el=document.getElementById(id);
+    if(el&&el.style.display!=='none'&&el.offsetParent!==null)return el;
+  }
+  return document.getElementById('slidesWrap');
+}
+function scrollSlides(dir){
+  const el=getActiveSlides();
+  if(!el)return;
+  const amount=dir==='prev'?-300:300;
+  el.scrollBy({left:amount,behavior:'smooth'});
+}
+
+// ── Quiz modal helpers ────────────────────────────────────
+function openQuizModal(boxId){
+  document.getElementById('quizBackdrop').classList.add('show');
+  document.getElementById(boxId).classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeAllQuiz(){
+  document.getElementById('quizBackdrop').classList.remove('show');
+  document.querySelectorAll('.quiz-box').forEach(b=>b.classList.remove('show'));
+  document.body.style.overflow='';
+}
+
+// ── Sidebar: toggle day expand/collapse ───────────────────
+function toggleDay(day){
+  const files=document.getElementById(day+'-files');
+  const arrow=document.getElementById(day+'-arrow');
+  const row=document.getElementById(day+'-row');
+  if(!files)return;
+  const isOpen=files.style.display!=='none';
+  // close all
+  ['day4','day5','day6'].forEach(d=>{
+    const f=document.getElementById(d+'-files');
+    const a=document.getElementById(d+'-arrow');
+    const r=document.getElementById(d+'-row');
+    if(f)f.style.display='none';
+    if(a){a.textContent='›';a.style.color='#5a5a8a';}
+    if(r)r.classList.remove('active');
+  });
+  if(!isOpen){
+    files.style.display='block';
+    arrow.textContent='▾';arrow.style.color='#a0a0c0';
+    row.classList.add('active');
+  }
+}
+
+// ── Switch slide panel ────────────────────────────────────
+function switchDay(day,filename,sub){
+  document.getElementById('topDocTitle').textContent=filename;
+  document.getElementById('topDocSub').textContent=sub+' · '+filename;
+  document.getElementById('curPg').textContent=1;
+  document.getElementById('slidesWrap').style.display='none';
+  document.getElementById('slideDay4').style.display='none';
+  document.getElementById('slideDay5').style.display='none';
+  if(day==='day4'){document.getElementById('slideDay4').style.display='flex';document.getElementById('slideDay4').scrollTop=0;}
+  else if(day==='day5'){document.getElementById('slideDay5').style.display='flex';document.getElementById('slideDay5').scrollTop=0;}
+  else if(day==='day6'){document.getElementById('slidesWrap').style.display='flex';document.getElementById('slidesWrap').scrollTop=0;}
+  document.querySelectorAll('.file-row').forEach(r=>r.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  ctaShown=false;
+  toast('📂 Đang xem: '+filename);
+}
+
+// ── Day 4 Quiz ────────────────────────────────────────────
+let d4Chosen={};let d4Submitted=false;
+function genD4Quiz(btn){
+  btn.textContent='⏳...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent='✨ Tạo Quiz cho Day 4';btn.disabled=false;
+    openQuizModal('d4QuizBox');
+    toast('✅ Quiz Day 4 đã được tạo!');
+  },700);
+}
+function submitD4Quiz(){
+  if(Object.keys(d4Chosen).length<3){toast('⚠️ Trả lời đủ 3 câu!');return;}
+  d4Submitted=true;let s=0;
+  ['d4q1','d4q2','d4q3'].forEach(q=>{
+    const a=d4Chosen[q];const fb=document.getElementById(q+'f');
+    if(a.correct){a.el.classList.add('ok');a.el.classList.remove('sel');s++;fb.className='q-fb ok';fb.textContent='✅ Chính xác!';}
+    else{a.el.classList.add('no');a.el.classList.remove('sel');fb.className='q-fb no';fb.textContent='❌ Chưa đúng!';}
+  });
+  document.getElementById('d4SubmitBtn').style.display='none';
+  const r=document.getElementById('d4QuizResult');r.style.display='block';
+  const e=s>=3?'🎉':s>=2?'👍':'📖';
+  r.innerHTML=`${e} ${s}/3 đúng`;
+  toast(`${e} Day 4: ${s}/3 câu đúng!`);
+}
+
+// ── Day 5 Quiz ────────────────────────────────────────────
+let d5Chosen={};let d5Submitted=false;
+function genD5Quiz(btn){
+  btn.textContent='⏳...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent='✨ Tạo Quiz cho Day 5';btn.disabled=false;
+    openQuizModal('d5QuizBox');
+    toast('✅ Quiz Day 5 đã được tạo!');
+  },700);
+}
+function submitD5Quiz(){
+  if(Object.keys(d5Chosen).length<3){toast('⚠️ Trả lời đủ 3 câu!');return;}
+  d5Submitted=true;let s=0;
+  ['d5q1','d5q2','d5q3'].forEach(q=>{
+    const a=d5Chosen[q];const fb=document.getElementById(q+'f');
+    if(a.correct){a.el.classList.add('ok');a.el.classList.remove('sel');s++;fb.className='q-fb ok';fb.textContent='✅ Chính xác!';}
+    else{a.el.classList.add('no');a.el.classList.remove('sel');fb.className='q-fb no';fb.textContent='❌ Chưa đúng!';}
+  });
+  document.getElementById('d5SubmitBtn').style.display='none';
+  const r=document.getElementById('d5QuizResult');r.style.display='block';
+  const e=s>=3?'🎉':s>=2?'👍':'📖';
+  r.innerHTML=`${e} ${s}/3 đúng`;
+  toast(`${e} Day 5: ${s}/3 câu đúng!`);
+}
+
+// ── Feature 1: generate slide quiz ───────────────────────
+let ctaShown=false;
+function genSlideQuiz(){
+  const btn=event.currentTarget;
+  btn.textContent='⏳ Đang tạo...';btn.disabled=true;
+  setTimeout(()=>{
+    btn.textContent='✨ Tạo Quiz cho toàn bộ slide';btn.disabled=false;
+    openQuizModal('quizBox');
+    toast('✅ Đã tạo 5 câu quiz từ nội dung Day 6!');
+  },1600);
+}
+
+// ── Quiz selection (handles day4/5/6) ─────────────────────
+const chosen={};let submitted=false;
+function pickOpt(el,q,correct){
+  if(q.startsWith('d4')){
+    if(d4Submitted)return;
+    document.querySelectorAll(`#${q}o .opt`).forEach(o=>o.classList.remove('sel'));
+    el.classList.add('sel');d4Chosen[q]={el,correct};return;
+  }
+  if(q.startsWith('d5')){
+    if(d5Submitted)return;
+    document.querySelectorAll(`#${q}o .opt`).forEach(o=>o.classList.remove('sel'));
+    el.classList.add('sel');d5Chosen[q]={el,correct};return;
+  }
+  if(submitted)return;
+  document.querySelectorAll(`#${q}o .opt`).forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  chosen[q]={el,correct};
+}
+
+function submitQuiz(){
+  if(Object.keys(chosen).length<5){toast('⚠️ Hãy trả lời tất cả 5 câu!');return;}
+  submitted=true;let score=0;
+  ['q1','q2','q3','q4','q5'].forEach(q=>{
+    const a=chosen[q];const fb=document.getElementById(q+'f');
+    if(a.correct){a.el.classList.add('ok');a.el.classList.remove('sel');score++;fb.className='q-fb ok';fb.textContent='✅ Chính xác!';}
+    else{a.el.classList.add('no');a.el.classList.remove('sel');fb.className='q-fb no';fb.textContent='❌ Chưa đúng. Xem lại slide!';}
+  });
+  const sb=document.getElementById('submitBtn');sb.style.display='none';
+  const rs=document.getElementById('quizResult');rs.style.display='block';
+  const e=score>=4?'🎉':score>=3?'👍':'📖';
+  const m=score>=4?'Xuất sắc!':score>=3?'Khá tốt!':'Cần ôn thêm!';
+  rs.innerHTML=`${e} ${m} <span style="color:#6b7280;font-weight:400;font-size:11px;">${score}/5 câu đúng</span>`;
+  document.getElementById('quizMeta').textContent=`5 câu hỏi · Kết quả: ${score}/5 đúng`;
+  toast(`${e} ${score}/5 câu đúng – ${m}`);
+}
+
+// ── Feature 2: inline quiz / example toggles ──────────────
+function toggleIQuiz(qId,exId,btn){
+  const q=document.getElementById(qId);
+  const ex=document.getElementById(exId);
+  if(q.classList.contains('show')){
+    q.classList.remove('show');
+    btn.innerHTML='🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>';
+    btn.classList.remove('active');return;
+  }
+  const origTxt=btn.innerHTML;
+  btn.textContent='⏳ Đang tạo...';btn.disabled=true;
+  ex.classList.remove('show');
+  // reset other btn
+  const exBtn=btn.parentElement.querySelector('.act-ex');
+  if(exBtn){exBtn.innerHTML='💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>';exBtn.classList.remove('active');}
+  setTimeout(()=>{
+    q.classList.add('show');
+    btn.innerHTML='🎯 Ẩn quiz';btn.classList.add('active');btn.disabled=false;
+    toast('🎯 Quiz nhanh đã được tạo từ câu trả lời!');
+  },700);
+}
+
+function toggleIEx(exId,qId,btn){
+  const ex=document.getElementById(exId);
+  const q=document.getElementById(qId);
+  if(ex.classList.contains('show')){
+    ex.classList.remove('show');
+    btn.innerHTML='💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>';
+    btn.classList.remove('active');return;
+  }
+  const origTxt=btn.innerHTML;
+  btn.textContent='⏳ Đang tạo...';btn.disabled=true;
+  q.classList.remove('show');
+  const qBtn=btn.parentElement.querySelector('.act-quiz');
+  if(qBtn){qBtn.innerHTML='🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>';qBtn.classList.remove('active');}
+  setTimeout(()=>{
+    ex.classList.add('show');
+    btn.innerHTML='💡 Ẩn ví dụ';btn.classList.add('active');btn.disabled=false;
+    toast('💡 Ví dụ thực tế đã được tạo!');
+  },600);
+}
+
+function chkIOpt(el,correct,containerId){
+  const opts=el.parentElement.querySelectorAll('.i-opt');
+  opts.forEach(o=>{o.onclick=null;});
+  if(correct){el.classList.add('ok');el.innerHTML+=` ✓`;toast('✅ Chính xác! Bạn đã hiểu đúng rồi!');}
+  else{
+    el.classList.add('no');
+    // highlight correct
+    opts.forEach(o=>{
+      if(o.getAttribute('data-correct')==='true')o.classList.add('ok');
+    });
+    toast('❌ Chưa đúng. Hỏi thêm Tutor để hiểu rõ hơn!');
+  }
+}
+
+// ── Highlight click on slide ──────────────────────────────
+function hlAsk(el){
+  const txt=el.textContent;
+  addUserMsg(`📌 [Bôi đen] "${txt.substring(0,70)}"`);
+  addTyping();
+  const replies={
+    'go / pilot / no-go':'<strong>Go / Pilot / No-go</strong> là 3 quyết định stakeholder đưa ra sau khi xem pitch deck:<br>• <strong>Go</strong>: dự án được chấp thuận, tiến hành đầy đủ<br>• <strong>Pilot</strong>: thử nghiệm nhỏ với nhóm giới hạn trước<br>• <strong>No-go</strong>: dừng lại, chưa đủ cơ sở',
+    'cổng đánh giá':'<strong>Cổng đánh giá (Gate)</strong> là điểm kiểm soát giữa các giai đoạn trong AI Product Life Cycle. Team phải trả lời: "Chúng ta có đủ bằng chứng để đi tiếp không?" Nếu chưa → quay lại giai đoạn trước, không lãng phí nguồn lực build tiếp.',
+    'không biết mình hiểu':'Đây chính là <strong>pain point</strong> mà dự án của bạn đang giải quyết! Học viên đọc xong nhưng không có cơ chế xác nhận hiểu đúng, dẫn đến mất thêm thời gian tự kiểm tra hoặc học sai kiến thức mà không biết.',
+  };
+  let response=`Đoạn bạn bôi đen nói về <strong>"${txt.substring(0,50)}"</strong>.<br><br>Đây là khái niệm quan trọng trong nội dung Day 6. Bạn có muốn tôi giải thích chi tiết hơn không?`;
+  for(const[k,v] of Object.entries(replies)){
+    if(txt.toLowerCase().includes(k.toLowerCase())){response=v;break;}
+  }
+  setTimeout(()=>{
+    removeTyping();
+    addAIMsg(response,true);
+  },1200);
+}
+
+// ── Chat send ─────────────────────────────────────────────
+function sendMsg(){
+  const inp=document.getElementById('chatInp');
+  const txt=inp.value.trim();if(!txt)return;
+  addUserMsg(txt);inp.value='';
+  addTyping();
+  const map={
+    'roi':'<strong>ROI (Return on Investment)</strong> = (Lợi nhuận – Chi phí) / Chi phí × 100%.<br>Trong AI product, ROI thường tính dựa trên tiết kiệm thời gian, tăng doanh thu hoặc giảm chi phí vận hành.',
+    'prd':'<strong>PRD</strong> (Product Requirements Document) là tài liệu mô tả chi tiết yêu cầu sản phẩm: mục tiêu, user stories, acceptance criteria và non-functional requirements.',
+    'quiz':'Tính năng <strong>Tạo Quiz</strong> mới trong demo này giúp học viên kiểm tra ngay sau khi đọc! Bạn có thể thử scroll xuống cuối slide để thấy nút "Tạo Quiz cho toàn bộ slide" 🎯',
+    'baseline':'<strong>Baseline</strong> là bước thiết lập chỉ số đo lường trước khi build model AI. Ví dụ: "Model đạt >70% accuracy" là baseline để quyết định go/no-go sang giai đoạn tiếp theo.',
+  };
+  let reply='Câu hỏi hay! Bạn có thể bôi đen đoạn cụ thể trong slide để tôi giải thích ngữ cảnh rõ hơn. Hoặc thử hỏi về: ROI, PRD, Baseline, AI Product Life Cycle...';
+  for(const[k,v] of Object.entries(map)){if(txt.toLowerCase().includes(k)){reply=v;break;}}
+  setTimeout(()=>{removeTyping();addAIMsg(reply,true);},1300);
+}
+
+// ── Chat helpers ─────────────────────────────────────────
+let rid=10;
+function addUserMsg(txt){
+  const c=document.getElementById('newMsgs');
+  c.innerHTML+=`<div class="msg-u" style="margin-bottom:10px;"><div class="msg-u-bbl">${txt}</div></div>`;
+  scrollChat();
+}
+
+function addTyping(){
+  const c=document.getElementById('newMsgs');
+  const d=document.createElement('div');d.className='msg-a';d.id='typing-ind';d.style.marginBottom='10px';
+  d.innerHTML=`<div class="msg-a-bbl"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>`;
+  c.appendChild(d);scrollChat();
+}
+
+function removeTyping(){const e=document.getElementById('typing-ind');if(e)e.remove();}
+
+function addAIMsg(text,withActions){
+  const c=document.getElementById('newMsgs');
+  rid++;const qid=`dq${rid}`;const eid=`de${rid}`;
+  const actions=withActions?`
+    <div class="act-btns">
+      <button class="act-btn act-quiz" onclick="toggleDynQ('${qid}','${eid}',this)">
+        🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>
+      </button>
+      <button class="act-btn act-ex" onclick="toggleDynEx('${eid}','${qid}',this)">
+        💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>
+      </button>
+    </div>
+    <div class="i-quiz" id="${qid}">
+      <div class="i-quiz-title">🎯 Quiz nhanh</div>
+      <div class="i-quiz-q">Cổng đánh giá trong AI Product Life Cycle giúp team quyết định điều gì?</div>
+      <div class="i-opts">
+        <div class="i-opt" onclick="chkDOpt(this,false)"><div class="i-dot">A</div>Tốc độ phát triển</div>
+        <div class="i-opt" onclick="chkDOpt(this,true)"><div class="i-dot">B</div>Go / No-go cho từng giai đoạn</div>
+        <div class="i-opt" onclick="chkDOpt(this,false)"><div class="i-dot">C</div>Ngân sách dự án</div>
+      </div>
+    </div>
+    <div class="i-ex" id="${eid}">
+      <div class="i-ex-title">💡 Ví dụ thực tế</div>
+      <div class="i-ex-body">
+        Ở dự án AI Tutor của bạn:<br>
+        Sau giai đoạn Baseline, team kiểm tra: "Model đạt >70% accuracy chưa?"
+        <div class="i-ex-block">
+          <strong>Kết quả gate:</strong><br>
+          → Chưa đạt: <strong>No-go</strong> → quay lại Data Review<br>
+          → Đạt rồi: <strong>Go</strong> → tiếp tục Build &amp; Evaluate<br><br>
+          Điều này giúp team không lãng phí 2 tuần build trên nền model còn yếu.
+        </div>
+      </div>
+    </div>`:'';;
+  c.innerHTML+=`
+    <div class="msg-a" style="margin-bottom:10px;">
+      <div class="msg-a-bbl">${text}</div>
+      <div class="conf-row">
+        <div class="c-track"><div class="c-fill" style="width:72%"></div></div>
+        <span class="c-lbl">72% · Khá tốt</span>
+        <span class="c-badge rep">● ĐÃ TRẢ LỜI</span>
+      </div>
+      <div class="fb-row">
+        <span class="fb-lbl">Phản hồi này có hữu ích không?</span>
+        <button class="fb-btn" onclick="this.classList.toggle('on')">👍</button>
+        <button class="fb-btn" onclick="this.classList.toggle('on')">👎</button>
+      </div>
+      ${actions}
+    </div>`;
+  scrollChat();
+}
+
+function toggleDynQ(qId,exId,btn){
+  const q=document.getElementById(qId);const ex=document.getElementById(exId);
+  if(q.classList.contains('show')){q.classList.remove('show');btn.innerHTML='🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>';btn.classList.remove('active');return;}
+  btn.textContent='⏳...';btn.disabled=true;
+  ex.classList.remove('show');
+  const eb=btn.parentElement.querySelector('.act-ex');
+  if(eb){eb.innerHTML='💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>';eb.classList.remove('active');}
+  setTimeout(()=>{q.classList.add('show');btn.innerHTML='🎯 Ẩn quiz';btn.classList.add('active');btn.disabled=false;toast('🎯 Quiz nhanh đã sẵn sàng!');},600);
+}
+
+function toggleDynEx(exId,qId,btn){
+  const ex=document.getElementById(exId);const q=document.getElementById(qId);
+  if(ex.classList.contains('show')){ex.classList.remove('show');btn.innerHTML='💡 Ví dụ thực tế <span class="new-tag" style="font-size:8px;">Mới</span>';btn.classList.remove('active');return;}
+  btn.textContent='⏳...';btn.disabled=true;
+  q.classList.remove('show');
+  const qb=btn.parentElement.querySelector('.act-quiz');
+  if(qb){qb.innerHTML='🎯 Tạo Quiz từ câu này <span class="new-tag" style="font-size:8px;">Mới</span>';qb.classList.remove('active');}
+  setTimeout(()=>{ex.classList.add('show');btn.innerHTML='💡 Ẩn ví dụ';btn.classList.add('active');btn.disabled=false;toast('💡 Ví dụ thực tế đã sẵn sàng!');},500);
+}
+
+function chkDOpt(el,correct){
+  const opts=el.parentElement.querySelectorAll('.i-opt');
+  opts.forEach(o=>{o.onclick=null;});
+  if(correct){el.classList.add('ok');el.innerHTML+=` ✓`;toast('✅ Chính xác!');}
+  else{el.classList.add('no');toast('❌ Chưa đúng. Thử hỏi lại Tutor!');}
+}
+
+function scrollChat(){const c=document.getElementById('chatBox');c.scrollTop=c.scrollHeight;}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── Init hint ─────────────────────────────────────────────
+window.onload=()=>{
+  setTimeout(()=>toast('💡 Scroll xuống để xem tiếp các slide · Bôi đen text để hỏi AI'),1200);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAllQuiz();});
+};
+</script>
+</body>
+</html>

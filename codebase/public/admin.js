@@ -1,3 +1,5 @@
+import { createSessionChip, requireRole } from "/auth.js";
+
 const els = {
   lessonSelect: document.querySelector("#lessonSelect"),
   refreshBtn: document.querySelector("#refreshBtn"),
@@ -24,6 +26,11 @@ let sortDir = -1;
 init();
 
 async function init() {
+  // Cổng điều hướng demo: học viên vào đây sẽ bị đẩy về màn học.
+  const session = requireRole("admin");
+  if (!session) return;
+  document.querySelector(".admin-topbar")?.append(createSessionChip(session));
+
   bindEvents();
   await loadLessonList();
   const startId = localStorage.getItem("vlearn-admin-lesson") || lessons[0]?.id;

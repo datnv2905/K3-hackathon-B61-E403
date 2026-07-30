@@ -1046,7 +1046,9 @@ function getClaudeModel() {
 /* ── HTTP plumbing ──────────────────────────────────────────────────── */
 
 async function serveStatic(pathname, res) {
-  const filePath = normalize(join(publicDir, pathname === "/" ? "/index.html" : pathname));
+  // "/" mở màn đăng nhập (mock) — nó tự chuyển tiếp sang /index.html hoặc
+  // /admin.html tuỳ vai trò. Xem codebase/public/auth.js và codebase/MOCKS.md.
+  const filePath = normalize(join(publicDir, pathname === "/" ? "/login.html" : pathname));
   if (!filePath.startsWith(publicDir)) return sendJson(res, 403, { error: "Forbidden" });
 
   let content;

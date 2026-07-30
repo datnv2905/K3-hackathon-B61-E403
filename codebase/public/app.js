@@ -1,3 +1,5 @@
+import { createSessionChip, requireRole } from "/auth.js";
+
 const STORAGE_PREFIX = "vlearn-tutor-session-v1";
 const MAX_PERSONALISED = 5;
 const DUPLICATE_THRESHOLD = 0.7;
@@ -58,12 +60,21 @@ let pageObserver = null;
 init();
 
 async function init() {
+  // Cổng điều hướng demo: chưa đăng nhập thì về /login.html, admin thì sang dashboard.
+  const session = requireRole("learner");
+  if (!session) return;
+  mountSessionChip(session);
+
   bindEvents();
   await loadLessonList();
   const startLessonId = localStorage.getItem("vlearn-active-lesson") || lessons[0]?.id;
   await Promise.all([loadLesson(startLessonId), loadHealth()]);
   renderChat();
   renderSummary();
+}
+
+function mountSessionChip(session) {
+  document.querySelector(".topbar-right")?.prepend(createSessionChip(session));
 }
 
 /* ── Loading ─────────────────────────────────────────────── */

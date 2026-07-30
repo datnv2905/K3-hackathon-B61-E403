@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VLearn · Đăng nhập</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="login-body">
+    <main class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">V</div>
+        <div class="brand-text">
+          <strong>VLearn</strong>
+          <span>AI Tutor theo ngữ cảnh slide</span>
+        </div>
+      </div>
+
+      <span class="mock-badge login-mock">MOCK · đăng nhập giả lập, không phải xác thực thật</span>
+
+      <form class="login-form" id="loginForm" novalidate>
+        <label class="login-field">
+          <span>Tài khoản</span>
+          <input id="usernameInput" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        </label>
+
+        <label class="login-field">
+          <span>Mật khẩu</span>
+          <input id="passwordInput" name="password" type="password" autocomplete="off" />
+        </label>
+
+        <p class="login-error" id="loginError" role="alert" hidden></p>
+
+        <button class="final-btn" type="submit">Đăng nhập</button>
+      </form>
+
+      <section class="login-demo" aria-label="Tài khoản demo">
+        <h2>Hai tài khoản demo</h2>
+        <p class="hint">Bấm để điền sẵn — mật khẩu để lộ thiên vì đây là bản demo.</p>
+        <ul class="login-demo-list" id="demoList"></ul>
+      </section>
+
+      <p class="login-note">
+        Bản prototype: vai trò lưu ở <code>localStorage</code>, các API vẫn phục vụ công khai. Đây là cổng điều
+        hướng để demo hai màn hình, <strong>không phải lớp bảo mật</strong>.
+      </p>
+    </main>
+
+    <script src="/login.js" type="module"></script>
+  </body>
+</html>

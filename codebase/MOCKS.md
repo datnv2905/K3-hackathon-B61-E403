@@ -30,15 +30,16 @@ Bảng này là bản khai báo trung thực theo R5 và vibe-coding rule. Nếu
 | Truy xuất | Trùng token, không phải embedding. Đủ cho 6 trang; **sẽ không đủ cho deck 37 trang thật**. |
 | Câu hỏi nền (Phần A) | Seed sẵn 3 câu trong lesson JSON. **Không có màn hình cho giảng viên tự soạn.** |
 | Đáp án Phần A | Gửi kèm xuống browser, nên mở devtools là đọc được. Chấp nhận được cho prototype, không chấp nhận được cho bản thật. |
-| Người học | Một người học giả lập, không có tài khoản. Analytics gộp theo `sessionId` của một phiên. |
+| Người học | Một người học giả lập, không có tài khoản thật. Analytics gộp theo `sessionId` của một phiên. |
+| **Đăng nhập** | **Giả lập hoàn toàn.** Hai tài khoản (`admin`/`admin123`, `hocvien`/`hocvien123`) là hằng số trong `codebase/public/auth.js`, mật khẩu để nguyên văn và in thẳng lên màn hình đăng nhập. Vai trò lưu ở `localStorage`; **API không kiểm tra gì cả** — gõ thẳng `/admin.html` rồi tự đặt `localStorage` là vào được, và `/api/admin/*` trả dữ liệu cho bất kỳ ai gọi. Đây là cổng **điều hướng** để demo hai màn hình, **không phải lớp bảo mật**. Bản thật cần session server-side + kiểm quyền trên từng route. |
 | Lưu trữ | `localStorage` + JSONL append. Không có database. |
-| **"Số người học" ở admin** | `totalLearners` là số `sessionId` khác nhau xuất hiện trong log — không phải tài khoản thật, vì không có đăng nhập. Admin screen ghi rõ điều này, không trình bày như headcount thật. |
+| **"Số người học" ở admin** | `totalLearners` là số `sessionId` khác nhau xuất hiện trong log — không phải tài khoản thật. Màn đăng nhập chỉ có 1 tài khoản học viên dùng chung, nên con số này vẫn đếm phiên chứ không đếm người. Admin screen ghi rõ điều này, không trình bày như headcount thật. |
 | **Heatmap ở admin** | Không phải overlay toạ độ x/y — vì lát cắt học viên **đã bỏ chế độ khoanh vùng** (xem ghi chú "Khoanh vùng" ở trên và `ADMIN_SIDE_IMPLEMENTATION.md` Non-goal 4). Bảng xếp hạng theo trang (câu hỏi, bôi đen, tỷ lệ sai) đóng vai trò heatmap cho bản này. Muốn có heatmap toạ độ thật theo đúng PRD §13.3 thì phải mang khoanh vùng quay lại trước. |
 | **Common questions** | Gộp theo chuỗi giống hệt nhau (exact-string), không phải clustering ngữ nghĩa thật. |
 | **Admin: câu hỏi từng trang** | Chỉ tính được cho các câu hỏi gửi kèm text (`ask_question` event) — log cũ trước khi field này được thêm sẽ không có, không backfill. |
 
 ## Không build trong bản này
 
-Heatmap toạ độ x/y (region-select đã bị bỏ) · AI vẽ lại diagram · workflow approve/regenerate/reject · xuất PDF phiên bản mới · chuyển Active version · tích hợp LMS · đăng nhập/tài khoản admin · sửa Phần A (câu hỏi nền) từ UI.
+Heatmap toạ độ x/y (region-select đã bị bỏ) · AI vẽ lại diagram · workflow approve/regenerate/reject · xuất PDF phiên bản mới · chuyển Active version · tích hợp LMS · sửa Phần A (câu hỏi nền) từ UI · **xác thực thật** (đăng ký, mật khẩu băm, session server-side, phân quyền ở tầng API — bản này chỉ có đăng nhập giả lập, xem bảng trên).
 
 Lý do: nằm ngoài lát cắt một câu của từng bản (xem `USER_SIDE_IMPLEMENTATION.md` và `ADMIN_SIDE_IMPLEMENTATION.md`). Các phần này có trong PRD §14–§16 như hướng đi tiếp, không phải phạm vi hai bản demo hiện tại.

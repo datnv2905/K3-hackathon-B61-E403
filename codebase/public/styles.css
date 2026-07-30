@@ -877,3 +877,104 @@ body {
     height: 62vh;
   }
 }
+
+/* ── Phone ───────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  body {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 10px;
+    overflow-x: auto;
+  }
+
+  .brand {
+    border-bottom: none;
+    padding-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .lesson-list {
+    flex-shrink: 0;
+  }
+
+  .lesson-item {
+    white-space: nowrap;
+  }
+
+  .summary {
+    display: none;
+  }
+
+  #resetSessionBtn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  .topbar-title h1 {
+    font-size: 14px;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .tool {
+    padding: 9px 12px;
+    min-height: 40px;
+  }
+
+  .viewer {
+    padding: 12px;
+  }
+
+  .slide-body {
+    padding: 14px 14px 18px;
+  }
+
+  .slide-title {
+    font-size: 17px;
+  }
+
+  .tutor {
+    height: 68vh;
+  }
+
+  .composer {
+    padding: 10px 12px;
+  }
+
+  .composer input {
+    font-size: 16px; /* prevents iOS Safari auto-zoom on focus */
+  }
+
+  .actions button,
+  .rate-row button,
+  .q-option,
+  .composer button {
+    min-height: 40px;
+  }
+
+  .final-modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+}

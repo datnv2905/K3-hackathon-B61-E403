@@ -200,7 +200,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;
 ::-webkit-scrollbar-track{background:#f1f5f9;}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
 ::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
-</style>
+
+/* ── ADMIN PANEL ─────────────────────────── */
+.admin-btn{position:relative;padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;display:flex;align-items:center;gap:4px;transition:all .15s;}
+.admin-btn:hover{background:#f9fafb;border-color:#9ca3af;}
+.admin-btn.alert{border-color:#ef4444;color:#ef4444;background:#fff5f5;}
+.admin-dot{position:absolute;top:-4px;right:-4px;width:9px;height:9px;background:#ef4444;border-radius:50%;border:2px solid #fff;display:none;}
+.admin-dot.show{display:block;animation:adpulse 1.4s infinite;}
+@keyframes adpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.6}}
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:599;}
+.admin-overlay.show{display:block;}
+.admin-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:360px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.14);z-index:600;flex-direction:column;}
+.admin-panel.show{display:flex;animation:slideRight .28s ease;}
+@keyframes slideRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.ap-hd{padding:13px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff;}
+.ap-title{font-size:13px;font-weight:700;color:#111;display:flex;align-items:center;gap:7px;}
+.ap-close{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px;}
+.ap-close:hover{color:#374151;}
+.ap-body{flex:1;overflow-y:auto;padding:14px;}
+.ap-stats{display:flex;gap:8px;margin-bottom:14px;}
+.ap-stat{flex:1;background:#f9fafb;border-radius:7px;padding:10px;text-align:center;border:1px solid #e5e7eb;}
+.ap-stat-n{font-size:18px;font-weight:800;color:#111;}
+.ap-stat-n.red{color:#ef4444;}
+.ap-stat-n.amber{color:#f59e0b;}
+.ap-stat-l{font-size:9px;color:#9ca3af;margin-top:2px;}
+.ap-section-lbl{font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.5px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #f3f4f6;}
+.hm-card{background:#f9fafb;border-radius:7px;padding:11px 13px;margin-bottom:8px;border:1px solid #e5e7eb;cursor:pointer;transition:box-shadow .15s;}
+.hm-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.hm-card.hot{border-color:#fca5a5;background:#fff5f5;}
+.hm-card.warm{border-color:#fcd34d;background:#fffbeb;}
+.hm-card.new-item{border-color:#6ee7b7;background:#f0fdf4;animation:newFlash .6s ease;}
+@keyframes newFlash{0%,100%{opacity:1}50%{opacity:.4}}
+.hm-text{font-size:11.5px;font-weight:600;color:#111;margin-bottom:6px;line-height:1.4;}
+.hm-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.hm-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:#e5e7eb;color:#374151;}
+.hm-badge.hot{background:#fee2e2;color:#dc2626;}
+.hm-badge.warm{background:#fef3c7;color:#b45309;}
+.hm-badge.new{background:#d1fae5;color:#059669;}
+.hm-slide{font-size:10px;color:#9ca3af;}
+.hm-bar{height:3px;background:#e5e7eb;border-radius:2px;margin-top:7px;overflow:hidden;}
+.hm-fill{height:100%;border-radius:2px;transition:width .7s ease;}
+.hm-fill.hot{background:linear-gradient(90deg,#f87171,#ef4444);}
+.hm-fill.warm{background:linear-gradient(90deg,#fbbf24,#f59e0b);}
+.hm-fill.cool{background:linear-gradient(90deg,#818cf8,#4f46e5);}
+.ap-live-dot{display:inline-block;width:6px;height:6px;background:#10b981;border-radius:50%;margin-right:4px;animation:liveBlink 1.5s infinite;}
+@keyframes liveBlink{0%,100%{opacity:1}50%{opacity:.3}}</style>
 </head>
 <body>
 
@@ -274,6 +318,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;
         <div class="pg-btn" onclick="nextPg()">›</div>
       </div>
       <span class="demo-tag">✨ DEMO – Hackathon</span>
+      <button class="admin-btn" id="adminBtn" onclick="openAdminPanel()">
+        📊 Phân tích
+        <div class="admin-dot" id="adminDot"></div>
+      </button>
     </div>
   </div>
 
@@ -1016,9 +1064,172 @@ function chkIOpt(el,correct,containerId){
   }
 }
 
+// ── Admin Heatmap: multi-user highlight tracking ──────────
+const ALERT_THRESHOLD = 3;
+let adminNewCount = 0;
+
+// Dữ liệu giả lập từ các học viên trước (background data)
+const highlightDB = {
+  'go / pilot / no-go': {
+    text: '"go / pilot / no-go" — quyết định stakeholder',
+    count: 7, slide: 'Trang 5/37 · Day 6', isNew: false,
+    times: ['08:14', '08:32', '08:45', '09:01', '09:18', '09:44', '10:02']
+  },
+  'ROI conservative / realistic / optimistic': {
+    text: 'ROI phải có kịch bản conservative / realistic / optimistic',
+    count: 5, slide: 'Trang 5/37 · Day 6', isNew: false,
+    times: ['08:20', '08:55', '09:10', '09:38', '10:05']
+  },
+  'cổng đánh giá (go / no-go)': {
+    text: 'cổng đánh giá (go / no-go) để quyết định có đi tiếp hay không',
+    count: 4, slide: 'Trang 3/37 · Day 6', isNew: false,
+    times: ['08:16', '08:40', '09:05', '09:50']
+  },
+  'cost-of-error': {
+    text: 'Lý do chọn mức automation phải viết theo cost-of-error: sai thì ai chịu gì',
+    count: 3, slide: 'Trang 2/32 · Day 5', isNew: false,
+    times: ['09:12', '09:33', '09:58']
+  },
+  'Evidence đường B': {
+    text: 'Evidence đường B: số mining đếm được + ≥5 ví dụ nguyên văn + phương pháp đếm',
+    count: 2, slide: 'Trang 1/32 · Day 5', isNew: false,
+    times: ['09:20', '09:47']
+  },
+  'Vibe-coding rule': {
+    text: 'Vibe-coding rule: dùng AI thoải mái, nhưng không giải thích được phần có tên mình thì 0 điểm',
+    count: 2, slide: 'Trang 1/28 · Day 4', isNew: false,
+    times: ['09:30', '10:10']
+  },
+};
+
+function trackHighlight(text, slideRef) {
+  // Tìm key khớp hoặc tạo mới
+  const shortText = text.substring(0, 50).trim();
+  let key = Object.keys(highlightDB).find(k =>
+    text.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(text.toLowerCase().substring(0,20))
+  );
+  if (!key) key = shortText;
+
+  const now = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+  if (!highlightDB[key]) {
+    highlightDB[key] = { text: text.substring(0, 100), count: 0, slide: slideRef, isNew: true, times: [] };
+  }
+  highlightDB[key].count++;
+  highlightDB[key].isNew = true;
+  highlightDB[key].times.push(now);
+  adminNewCount++;
+
+  // Update badge
+  document.getElementById('adminDot').classList.add('show');
+  document.getElementById('adminBtn').classList.add('alert');
+
+  const cnt = highlightDB[key].count;
+  if (cnt >= ALERT_THRESHOLD) {
+    toast(`🔥 ${cnt} học viên bôi đen đoạn này! Đã ghi nhận → Admin Panel`);
+  } else if (cnt >= 2) {
+    toast(`📊 ${cnt} học viên đã bôi đen đoạn này → ghi nhận vào Admin Panel`);
+  } else {
+    toast('📌 Đã ghi nhận lượt bôi đen vào Admin Panel');
+  }
+
+  // If panel is open, re-render live
+  if (document.getElementById('adminPanel').classList.contains('show')) {
+    renderAdminPanel();
+  }
+}
+
+function openAdminPanel() {
+  document.getElementById('adminOverlay').classList.add('show');
+  document.getElementById('adminPanel').classList.add('show');
+  document.getElementById('adminDot').classList.remove('show');
+  document.getElementById('adminBtn').classList.remove('alert');
+  adminNewCount = 0;
+  renderAdminPanel();
+  // Reset isNew after 2s
+  setTimeout(() => {
+    Object.values(highlightDB).forEach(d => d.isNew = false);
+    renderAdminPanel();
+  }, 2000);
+}
+
+function closeAdminPanel() {
+  document.getElementById('adminOverlay').classList.remove('show');
+  document.getElementById('adminPanel').classList.remove('show');
+}
+
+function renderAdminPanel() {
+  const body = document.getElementById('adminBody');
+  const items = Object.entries(highlightDB)
+    .map(([k, v]) => ({ key: k, ...v }))
+    .sort((a, b) => b.count - a.count);
+
+  const total = items.reduce((s, i) => s + i.count, 0);
+  const hotCount = items.filter(i => i.count >= ALERT_THRESHOLD).length;
+  const maxCount = Math.max(...items.map(i => i.count), 1);
+  const now = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+
+  let html = `
+    <div class="ap-stats">
+      <div class="ap-stat">
+        <div class="ap-stat-n">${total}</div>
+        <div class="ap-stat-l">Tổng lượt bôi đen</div>
+      </div>
+      <div class="ap-stat">
+        <div class="ap-stat-n red">${hotCount}</div>
+        <div class="ap-stat-l">Đoạn nóng (≥${ALERT_THRESHOLD})</div>
+      </div>
+      <div class="ap-stat">
+        <div class="ap-stat-n">${items.length}</div>
+        <div class="ap-stat-l">Đoạn duy nhất</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="ap-section-lbl" style="margin-bottom:0;">NỘI DUNG ĐƯỢC BÔI ĐEN NHIỀU NHẤT</div>
+      <span style="font-size:9px;color:#9ca3af;">Cập nhật: ${now}</span>
+    </div>
+  `;
+
+  items.forEach(item => {
+    const isHot = item.count >= ALERT_THRESHOLD;
+    const isWarm = item.count >= 2 && !isHot;
+    const cardClass = item.isNew ? 'new-item' : isHot ? 'hot' : isWarm ? 'warm' : '';
+    const badgeClass = item.isNew ? 'new' : isHot ? 'hot' : isWarm ? 'warm' : '';
+    const fillClass = isHot ? 'hot' : isWarm ? 'warm' : 'cool';
+    const pct = Math.round((item.count / maxCount) * 100);
+    const lastTime = item.times.length > 0 ? item.times[item.times.length - 1] : '—';
+    const icon = isHot ? '🔥' : isWarm ? '⚠️' : '';
+    const badgeLabel = item.isNew ? '● Mới' : `${item.count} học viên ${icon}`;
+
+    html += `
+      <div class="hm-card ${cardClass}">
+        <div class="hm-text">"${item.text.substring(0, 85)}${item.text.length > 85 ? '...' : ''}"</div>
+        <div class="hm-meta">
+          <span class="hm-badge ${badgeClass}">${badgeLabel}</span>
+          <span class="hm-slide">📄 ${item.slide}</span>
+          <span class="hm-slide">🕐 ${lastTime}</span>
+        </div>
+        <div class="hm-bar"><div class="hm-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  });
+
+  if (items.length === 0) {
+    html += `<div style="text-align:center;padding:28px;color:#9ca3af;font-size:13px;">Chưa có dữ liệu.<br>Hãy bôi đen một đoạn trong slide!</div>`;
+  }
+
+  body.innerHTML = html;
+}
+
 // ── Highlight click on slide ──────────────────────────────
 function hlAsk(el){
   const txt=el.textContent;
+
+  // Get slide context for admin tracking
+  const card=el.closest('.slide-card');
+  const pgEl=card?card.querySelector('.slide-pg'):null;
+  const slideRef=pgEl?pgEl.textContent:'Slide hiện tại';
+  trackHighlight(txt, slideRef);
+
   addUserMsg(`📌 [Bôi đen] "${txt.substring(0,70)}"`);
   addTyping();
   const replies={
@@ -1163,8 +1374,23 @@ function toast(msg){
 // ── Init hint ─────────────────────────────────────────────
 window.onload=()=>{
   setTimeout(()=>toast('💡 Scroll xuống để xem tiếp các slide · Bôi đen text để hỏi AI'),1200);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAllQuiz();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAllQuiz();closeAdminPanel();}});
 };
 </script>
+
+<!-- ADMIN OVERLAY + PANEL -->
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminPanel()"></div>
+<div class="admin-panel" id="adminPanel">
+  <div class="ap-hd">
+    <div class="ap-title">
+      <span class="ap-live-dot"></span>
+      📊 Heatmap Bôi Đen · Admin
+    </div>
+    <button class="ap-close" onclick="closeAdminPanel()">✕</button>
+  </div>
+  <div class="ap-body" id="adminBody">
+    <!-- rendered by JS -->
+  </div>
+</div>
 </body>
 </html>

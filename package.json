@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node codebase/server.js",
     "start": "node codebase/server.js",
+    "dev:claude": "node codebase/server.js --claude",
+    "start:claude": "node codebase/server.js --claude",
     "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json"
   }
 }

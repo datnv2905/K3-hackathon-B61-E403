@@ -1,10 +1,10 @@
-# AI SPEC — [Tên lát cắt] · Nhóm [B6-1] · Zone [3]
+# AI SPEC — [AI tạo quiz phần bài giảng khó hiểu cho sinh viên] · Nhóm [B6-1] · Zone [3]
 Hướng: [✅] A — VLearn  [ ] B — Trợ lý Học viên  [ ] C — Làn mở
 Loại: [ ] Tối ưu tính năng có sẵn  [✅] Tính năng mới
 
 ## §1. User & Job
 - Job executor + workflow (đính kèm worksheet JTBD / ảnh sơ đồ):
-    ## Workflow
+    ## Workflow  
 
 ```mermaid
 flowchart TD

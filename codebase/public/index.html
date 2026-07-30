@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VLearn · AI Tutor theo ngữ cảnh slide</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">V</div>
+        <div class="brand-text">
+          <strong>VLearn</strong>
+          <span>AI Tutor</span>
+        </div>
+      </div>
+
+      <nav class="lesson-list" id="lessonList" aria-label="Bài học">
+        <button class="lesson-item is-active" type="button" disabled>
+          <span>—</span>
+          <strong id="lessonNavTitle">Đang tải…</strong>
+        </button>
+      </nav>
+
+      <section class="summary" aria-label="Tiến độ phiên học">
+        <h2>Phiên học này</h2>
+        <dl>
+          <div><dt>Câu hỏi</dt><dd id="statQuestions">0</dd></div>
+          <div><dt>Micro quiz</dt><dd id="statQuizzes">0</dd></div>
+          <div><dt>Đúng / đã trả lời</dt><dd id="statAccuracy">0 / 0</dd></div>
+          <div><dt>Câu vào quiz tổng hợp</dt><dd id="statIncluded">0</dd></div>
+        </dl>
+      </section>
+
+      <button class="ghost-btn" id="resetSessionBtn" type="button">Xoá phiên học</button>
+    </aside>
+
+    <main class="shell">
+      <header class="topbar">
+        <div class="topbar-title">
+          <p id="lessonFileName">—</p>
+          <h1 id="lessonTitle">Đang tải bài giảng…</h1>
+        </div>
+        <div class="topbar-right">
+          <span class="mock-badge" id="mockBadge" hidden>MOCK · nội dung soạn tay, không trích từ PDF</span>
+          <div class="toolbar" role="toolbar" aria-label="Công cụ chọn nội dung">
+            <span class="tool-hint">Bôi đen một đoạn để hỏi AI</span>
+            <button class="tool is-muted" id="clearSelectionBtn" type="button">Xoá chọn</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <section class="viewer" id="viewer" aria-label="Nội dung bài giảng"></section>
+
+        <aside class="tutor" aria-label="AI tutor">
+          <header class="tutor-head">
+            <div>
+              <p>AI Tutor</p>
+              <h2>Hỏi theo ngữ cảnh</h2>
+            </div>
+            <span class="model-pill" id="modelPill">…</span>
+          </header>
+
+          <section class="context-box">
+            <span>Ngữ cảnh đang chọn</span>
+            <p id="contextPreview">Chưa chọn nội dung</p>
+          </section>
+
+          <section class="chat" id="chat" aria-live="polite"></section>
+
+          <form class="composer" id="askForm">
+            <input
+              id="questionInput"
+              name="question"
+              autocomplete="off"
+              placeholder="Hỏi về phần đang chọn…"
+              aria-label="Câu hỏi cho AI tutor"
+            />
+            <button type="submit" id="askBtn">Gửi</button>
+          </form>
+
+          <button class="final-btn" id="finalQuizBtn" type="button">Mở quiz tổng hợp cuối bài</button>
+        </aside>
+      </section>
+    </main>
+
+    <div class="overlay" id="finalOverlay" hidden>
+      <section class="final-modal" role="dialog" aria-modal="true" aria-labelledby="finalModalTitle">
+        <header>
+          <h2 id="finalModalTitle">Quiz tổng hợp cuối bài</h2>
+          <button class="ghost-btn" id="closeFinalBtn" type="button">Đóng</button>
+        </header>
+        <div class="final-body" id="finalBody"></div>
+      </section>
+    </div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

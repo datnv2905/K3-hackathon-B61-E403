@@ -1,0 +1,120 @@
+{
+  "id": "day06-ai-product-method",
+  "title": "Phương pháp làm sản phẩm AI",
+  "sourceFile": "day06-ai-product-method.pdf",
+  "totalPagesInRealDeck": 37,
+  "isMock": true,
+  "mockNote": "Nội dung trang dưới đây được soạn tay từ 01-de-bai.md và 02-guide.md, KHÔNG phải text trích tự động từ file PDF. Xem codebase/MOCKS.md.",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "theme": "blue",
+      "title": "Vòng đời sản phẩm AI",
+      "text": "Một sản phẩm AI đi qua sáu giai đoạn: Problem Scoping, Data Review, Baseline, Build & Evaluate, Deploy & Monitor, Iterate. Giữa các giai đoạn có cổng đánh giá go / no-go để quyết định có đi tiếp hay không.",
+      "points": [
+        "Problem Scoping xác định pain cụ thể trước khi nghĩ tới giải pháp.",
+        "Baseline đặt mức đo tối thiểu để biết mô hình có thật sự hơn cách làm cũ.",
+        "Cổng go / no-go giúp tránh build tiếp trên một giả định yếu."
+      ],
+      "visual": ["Problem", "Data", "Baseline"]
+    },
+    {
+      "pageNumber": 2,
+      "theme": "teal",
+      "title": "Problem Scoping",
+      "text": "Problem statement không được chứa chữ AI. Câu vấn đề phải nói rõ ai đang làm gì, vướng ở đâu và hậu quả là gì. Ví dụ: học viên đang đọc tài liệu không biết mình hiểu đúng hay sai, nên mất 3-5 phút mỗi lần tự kiểm tra lại.",
+      "points": [
+        "Viết rõ ai đang làm gì, không viết chung chung là mọi người thấy bất tiện.",
+        "Nêu hậu quả bằng thời gian, điểm số hoặc niềm tin bị mất.",
+        "Không nhảy thẳng vào giải pháp — giải pháp là bước sau."
+      ],
+      "visual": ["User", "Job", "Impact"]
+    },
+    {
+      "pageNumber": 3,
+      "theme": "amber",
+      "title": "Hai chuẩn bằng chứng",
+      "text": "Bằng chứng đạt chuẩn theo một trong hai đường, hoặc cả hai. Đường A là khảo sát: ít nhất 20 người ngoài nhóm, ít nhất 50% xác nhận có pain, và log đầy đủ cả câu hỏi lẫn từng câu trả lời nguyên văn. Đường B là mining dữ liệu: số đếm được, ít nhất 5 ví dụ nguyên văn, và phương pháp đếm mà người khác kiểm lại được.",
+      "points": [
+        "Đường A — khảo sát: ≥20 người ngoài nhóm, ≥50% xác nhận, log đầy đủ.",
+        "Đường B — mining: số đếm được + ≥5 ví dụ nguyên văn + phương pháp kiểm lại được.",
+        "Cảm nhận cá nhân của nhóm không phải bằng chứng."
+      ],
+      "visual": ["Khảo sát", "Mining", "Log"]
+    },
+    {
+      "pageNumber": 4,
+      "theme": "blue",
+      "title": "Lát cắt một câu",
+      "text": "Lát cắt prototype phải gói được trong đúng một câu theo bốn phần: một người dùng, một công việc, một quyết định AI, một kết quả. Lát cắt viết đúng format thì demo được trong 5 phút và build được trong thời gian sự kiện.",
+      "points": [
+        "Một người dùng — nói rõ người đó đang ở tình huống nào.",
+        "Một công việc — việc họ đang cố hoàn thành, không phải tính năng họ muốn.",
+        "Một quyết định AI — chỗ duy nhất AI được quyền quyết.",
+        "Một kết quả — thay đổi đo được sau khi dùng."
+      ],
+      "visual": ["User", "Job", "AI decision", "Outcome"]
+    },
+    {
+      "pageNumber": 5,
+      "theme": "teal",
+      "title": "Bốn lớp chỗ khó",
+      "text": "Mọi sản phẩm AI phải tự xác định bốn lớp chỗ khó. Lớp một là nguồn sự thật: chỗ nào AI bịa được, và khi không có căn cứ thì làm gì. Lớp hai là mơ hồ hoặc thiếu thông tin: input không đủ chắc thì hỏi lại, đoán có báo, hay từ chối. Lớp ba là ngoài phạm vi hoặc ngoài thẩm quyền: user đòi thứ hệ thống không được phép làm, từ chối sao cho vẫn hữu ích. Lớp bốn là đặc thù domain: sai cái gì thì user mất điểm, mất niềm tin hoặc học sai kiến thức ngay.",
+      "points": [
+        "① Nguồn sự thật — không có căn cứ thì nói không có, không suy diễn.",
+        "② Mơ hồ / thiếu thông tin — hỏi lại một câu thay vì đoán im lặng.",
+        "③ Ngoài phạm vi / thẩm quyền — từ chối nhưng chỉ đường đi tiếp.",
+        "④ Đặc thù domain — xác định sai cái gì thì hậu quả nặng nhất."
+      ],
+      "visual": ["Sự thật", "Mơ hồ", "Phạm vi", "Domain"]
+    },
+    {
+      "pageNumber": 6,
+      "theme": "amber",
+      "title": "Golden set và quality bar",
+      "text": "Golden set là bộ case nhóm tự xây, tối thiểu 20 case: ít nhất 2 case cho mỗi lớp chỗ khó, 8 đến 10 case thường, 2 đến 4 case hiếm, trong đó ít nhất 10 case lấy hoặc phát triển từ dữ liệu thật. Quality bar phải là con số, chốt trước khi đo và giữ nguyên sau đó. Kết quả đo ghi nhận trung thực, kể cả khi không đạt bar.",
+      "points": [
+        "Định nghĩa tốt được chưng cất từ lỗi đã thấy, không từ tiêu chí trừu tượng.",
+        "Quality bar dạng: đạt khi ≥ bao nhiêu phần trăm qua bộ, kèm điều kiện cứng.",
+        "Không đổi bar khi thấy kết quả thấp — phân tích khoảng cách mới là nội dung cần trình bày."
+      ],
+      "visual": ["20 case", "4 lớp", "Bar %"]
+    }
+  ],
+  "baseQuestions": [
+    {
+      "id": "base-01",
+      "type": "mcq",
+      "pageNumber": 3,
+      "prompt": "Khảo sát theo đường A đạt chuẩn bằng chứng khi nào?",
+      "options": [
+        "≥20 người ngoài nhóm, ≥50% xác nhận, có log đầy đủ",
+        "≥10 người trong nhóm, ≥30% xác nhận",
+        "Chỉ cần 5 ví dụ nguyên văn từ dữ liệu"
+      ],
+      "correctOptionIndex": 0,
+      "explanation": "Đường A yêu cầu ít nhất 20 người ngoài nhóm, ít nhất 50% xác nhận, và log đầy đủ câu hỏi lẫn từng câu trả lời."
+    },
+    {
+      "id": "base-02",
+      "type": "mcq",
+      "pageNumber": 4,
+      "prompt": "Lát cắt một câu gồm bốn phần nào?",
+      "options": [
+        "Một người dùng · một công việc · một quyết định AI · một kết quả",
+        "Một tính năng · một mô hình · một API · một giao diện",
+        "Một pain · một giải pháp · một KPI · một deadline"
+      ],
+      "correctOptionIndex": 0,
+      "explanation": "Format bắt buộc là: một người dùng · một công việc · một quyết định AI · một kết quả."
+    },
+    {
+      "id": "base-03",
+      "type": "short_answer",
+      "pageNumber": 2,
+      "prompt": "Vì sao problem statement không được chứa chữ AI?",
+      "referenceAnswer": "Vì problem statement phải mô tả vấn đề của người dùng — ai đang làm gì, vướng đâu, hậu quả gì. Nhắc AI trong câu vấn đề là đã chọn sẵn giải pháp trước khi hiểu vấn đề.",
+      "explanation": "Câu vấn đề tả pain, không tả công nghệ. Đưa AI vào là nhảy sang giải pháp quá sớm."
+    }
+  ]
+}

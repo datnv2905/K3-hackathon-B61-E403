@@ -1,0 +1,15 @@
+{
+  "name": "vlearn-slide-ai-tutor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Learner-side first slice: cited AI tutor over lecture slides + micro quiz.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node codebase/server.js",
+    "start": "node codebase/server.js",
+    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json"
+  }
+}

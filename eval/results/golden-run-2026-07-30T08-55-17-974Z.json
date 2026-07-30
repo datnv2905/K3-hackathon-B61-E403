@@ -1,0 +1,664 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_day06_golden_set_v1",
+    "model": "deterministic-intent-router",
+    "started_at": "2026-07-30T08:55:17.974Z",
+    "finished_at": "2026-07-30T08:55:17.985Z",
+    "total": 25,
+    "passed": 23,
+    "failed": 2,
+    "pass_rate": 0.92
+  },
+  "results": [
+    {
+      "id": "TC01_free_question_roi",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "ROI trong AI product cần tính theo mấy kịch bản?",
+              "context_type": "free"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC02_highlight_ask_gate",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giải thích cổng đánh giá (go / no-go)",
+              "context_type": "highlight",
+              "slide_number": 3,
+              "selected_text": "cổng đánh giá (go / no-go)"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giải thích cổng đánh giá (go / no-go)",
+              "context_type": "highlight",
+              "slide_number": 3,
+              "selected_text": "cổng đánh giá (go / no-go)"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC03_region_select_diagram",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "context_type": "region",
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "context_type": "region",
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC04_slide_number_boundary",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "context_type": "free",
+              "slide_number": 6
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "Ở trang cuối cùng của bài Day 6 (trang 6 trên slide viewer, tương ứng trang 37 file gốc), phần tóm tắt nói gì?",
+              "context_type": "free",
+              "slide_number": 6
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC05_generate_micro_quiz_basic",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Problem Statement Framework"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Problem Statement Framework"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC06_micro_quiz_num_questions_boundary",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "num_questions": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "AI Product Life Cycle",
+              "num_questions": 3
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC07_micro_quiz_short_answer_type",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Golden Set"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "generate_micro_quiz",
+            "args": {
+              "source_context": "Golden Set"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC08_rate_quiz_helpful",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "rate_micro_quiz",
+            "args": {
+              "quiz_id": "mq_0007",
+              "rating": "helpful"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "ask_chatbot",
+            "args": {
+              "query": "giải thích Hữu ích",
+              "context_type": "highlight",
+              "selected_text": "Hữu ích"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: expected rate_micro_quiz, got ask_chatbot"
+      ]
+    },
+    {
+      "id": "TC09_rate_quiz_not_helpful_with_reason",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": false,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "rate_micro_quiz",
+            "args": {
+              "quiz_id": "mq_0008",
+              "rating": "not_helpful",
+              "reason": "Không liên quan đến nội dung vừa hỏi"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "rate_micro_quiz",
+            "args": {
+              "quiz_id": "mq_0008",
+              "rating": "helpful",
+              "reason": "Không liên quan đến nội dung vừa hỏi"
+            }
+          }
+        ]
+      },
+      "diagnostics": [
+        "call 1: arg rating expected \"not_helpful\", got \"helpful\""
+      ]
+    },
+    {
+      "id": "TC10_optout_disable",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": false
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": false
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC11_optout_reenable_before_final",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": true
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "set_quiz_optout",
+            "args": {
+              "quiz_id": "mq_0007",
+              "include_in_final": true
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC12_optout_locked_after_final_started",
+      "phase": "B",
+      "failure_type": "unnecessary_tool",
+      "pass": true,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": []
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC13_start_final_quiz",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "start_final_quiz",
+            "args": {}
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "start_final_quiz",
+            "args": {}
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC14_admin_dashboard_overview",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "overview"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "overview"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC15_admin_slide_heatmap",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "slide_heatmap"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "get_admin_dashboard",
+            "args": {
+              "filter": "slide_heatmap"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC16_smart_suggestion_request",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "get_smart_suggestions",
+            "args": {}
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "get_smart_suggestions",
+            "args": {}
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC17_regenerate_diagram_request",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "regenerate_diagram",
+            "args": {
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "regenerate_diagram",
+            "args": {
+              "slide_number": 3
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC18_review_diagram_approve",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "approve"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "approve"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC19_review_diagram_regenerate_with_note",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "regenerate",
+              "note": "Bổ sung thêm nhãn cho từng bước"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "regenerate",
+              "note": "Bổ sung thêm nhãn cho từng bước"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC20_review_diagram_reject",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "reject",
+              "note": "Không sát với nội dung Markdown gốc"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "review_diagram_proposal",
+            "args": {
+              "proposal_id": "prop_0012",
+              "action": "reject",
+              "note": "Không sát với nội dung Markdown gốc"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC21_export_pdf_new_version",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "export_pdf_version",
+            "args": {
+              "description": "Cập nhật diagram slide 3"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "export_pdf_version",
+            "args": {
+              "description": "Cập nhật diagram slide 3"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC22_switch_pdf_version",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "pass": true,
+      "expected": {
+        "tool_calls": [
+          {
+            "name": "switch_pdf_version",
+            "args": {
+              "version_id": "v1"
+            }
+          }
+        ]
+      },
+      "actual": {
+        "tool_calls": [
+          {
+            "name": "switch_pdf_version",
+            "args": {
+              "version_id": "v1"
+            }
+          }
+        ]
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC23_out_of_scope_internet_search",
+      "phase": "B",
+      "failure_type": "out_of_scope",
+      "pass": true,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": []
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC24_out_of_scope_pptx_upload",
+      "phase": "B",
+      "failure_type": "out_of_scope",
+      "pass": true,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": []
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "TC25_missing_info_vague_question",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "pass": true,
+      "expected": {
+        "no_tool": true
+      },
+      "actual": {
+        "tool_calls": []
+      },
+      "diagnostics": []
+    }
+  ]
+}

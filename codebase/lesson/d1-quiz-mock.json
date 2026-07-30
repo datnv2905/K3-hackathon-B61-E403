@@ -1,0 +1,141 @@
+{
+  "id": "d1-ai-llm-foundation-quiz",
+  "title": "Day 1 — AI & LLM Foundation · quiz mock 10 câu",
+  "source": "Slide/d1-slide-hackathon.md",
+  "authoring": "mock",
+  "authoringNote": "10 câu soạn tay từ nội dung Day 1, KHÔNG do AI sinh. Dùng làm bộ câu hỏi nền (Phần A) hoặc để test luồng quiz tổng hợp.",
+  "pageNumberNote": "pageNumber được xác nhận bằng cách trích xuất text-layer thật từ Slide/d1-slide-hackathon.pdf (qua pdf.js, server-side) và so khớp với sourceHeading — không phải đoán từ markdown OCR. 9/10 câu khớp gần như tuyệt đối (token-overlap ≥0.9). Riêng d1-04: số liệu ví dụ (9 từ/11 token, 10 từ/19 token) chỉ tồn tại dưới dạng ẢNH trên trang 13, không có trong text-layer của PDF — pageNumber=13 xác nhận bằng cách đọc thủ công nội dung trang, không phải qua khớp text tự động. Vì vậy khi tutor cite trang 13 cho câu hỏi loại này, quoteVerified có thể = false một cách hợp lý (không phải lỗi).",
+  "questions": [
+    {
+      "id": "d1-01",
+      "type": "mcq",
+      "pageNumber": 3,
+      "sourceHeading": "AI, ML, Deep Learning, GenAI, LLM — nằm ở đâu trong cùng một hệ?",
+      "prompt": "Xếp từ rộng đến hẹp, thành phần nào nằm ở trong cùng?",
+      "options": [
+        "Machine Learning",
+        "Artificial Intelligence",
+        "Deep Learning",
+        "LLM"
+      ],
+      "correctOptionIndex": 3,
+      "explanation": "Thứ tự từ rộng đến hẹp: AI ⊃ Machine Learning ⊃ Deep Learning ⊃ Generative AI ⊃ LLM. LLM là tầng hẹp nhất, không phải toàn bộ AI."
+    },
+    {
+      "id": "d1-02",
+      "type": "mcq",
+      "pageNumber": 4,
+      "sourceHeading": "Ba nhóm AI chính: phân loại · sinh nội dung · hành động",
+      "prompt": "Hệ thống “nhận một mục tiêu rồi tự lập kế hoạch, dùng công cụ và hành động nhiều bước” thuộc nhóm nào?",
+      "options": [
+        "Discriminative AI",
+        "Generative AI",
+        "Agentic AI"
+      ],
+      "correctOptionIndex": 2,
+      "explanation": "Agentic AI đi theo mạch Goal → Plan → Action. Discriminative AI cho ra một nhãn hoặc một con số; Generative AI sinh nội dung mới từ prompt."
+    },
+    {
+      "id": "d1-03",
+      "type": "mcq",
+      "pageNumber": 10,
+      "sourceHeading": "LLM là gì? — một bộ não nền, không phải một chatbot",
+      "prompt": "Về bản chất, LLM được luyện để làm việc gì?",
+      "options": [
+        "Tra cứu sự thật trong một cơ sở dữ liệu",
+        "Đoán mảnh chữ tiếp theo trong ngữ cảnh",
+        "Phân loại câu hỏi thành các chủ đề có sẵn"
+      ],
+      "correctOptionIndex": 1,
+      "explanation": "LLM học đoán token tiếp theo trong ngữ cảnh. Vì luyện đủ rộng nên nó thành model nền dùng chung; chatbot chỉ là một lớp áo sản phẩm bọc quanh nó."
+    },
+    {
+      "id": "d1-04",
+      "type": "mcq",
+      "pageNumber": 13,
+      "sourceHeading": "Minh hoạ bằng tokenizer thật: tiktoken cl100k_base (GPT-4)",
+      "prompt": "Câu tiếng Anh 9 từ ra 11 token, câu tiếng Việt 10 từ ra 19 token. Điểm quan trọng cần rút ra là gì?",
+      "options": [
+        "Tiếng Việt luôn có nhiều từ hơn tiếng Anh",
+        "Tokenizer đếm sai với tiếng Việt nên số token không đáng tin",
+        "Tỉ lệ token/từ của tiếng Việt cao hơn hẳn, nên cùng một ý sẽ tốn nhiều token hơn"
+      ],
+      "correctOptionIndex": 2,
+      "explanation": "So sánh không nằm ở tổng số từ tuyệt đối (9 vs 10) mà ở tỉ lệ token/từ: khoảng 1.2 với tiếng Anh so với 1.9 với tiếng Việt, vì BPE được huấn luyện chủ yếu trên dữ liệu Anh ngữ nên cắt dấu thanh tiếng Việt vụn hơn."
+    },
+    {
+      "id": "d1-05",
+      "type": "short_answer",
+      "pageNumber": 16,
+      "sourceHeading": "Hiểu attention để dùng AI hiệu quả: quản context = quản sự chú ý",
+      "prompt": "Hiện tượng “Lost in the Middle” là gì, và nó dẫn tới lời khuyên thực hành nào khi viết prompt?",
+      "referenceAnswer": "Thông tin đặt ở giữa ngữ cảnh dễ bị model bỏ sót nhất, còn đầu và cuối prompt được chú ý nhiều nhất. Vì vậy nên đặt yêu cầu quan trọng ở đầu hoặc cuối prompt, đừng chôn nó ở giữa.",
+      "explanation": "Attention có hạn và có điểm mù hình chữ U (Liu et al. 2023). Ba cách xử lý trong slide: đặt điều quan trọng ở đầu — cuối, giữ bàn làm việc sạch, và cho model tra sổ (RAG) thay vì bắt nó nhớ hết."
+    },
+    {
+      "id": "d1-06",
+      "type": "mcq",
+      "pageNumber": 15,
+      "sourceHeading": "Attention: mỗi từ được “nhìn sang” những từ quan trọng khác",
+      "prompt": "Cơ chế attention cho phép mỗi token làm gì?",
+      "options": [
+        "Đọc tuần tự từng chữ từ đầu đến cuối câu",
+        "Quay lại nhìn các token khác và chấm điểm mức độ liên quan để khóa nghĩa theo ngữ cảnh",
+        "Ghi thêm tri thức mới vào tham số của model"
+      ],
+      "correctOptionIndex": 1,
+      "explanation": "Thay vì đọc tuần tự, mỗi token chủ động “quay đầu” nhìn các token khác, chấm điểm liên quan, rồi khóa nghĩa theo ngữ cảnh — nhờ vậy model biết “nó” là quyển sách hay cái túi. Đây là chữ T trong GPT."
+    },
+    {
+      "id": "d1-07",
+      "type": "mcq",
+      "pageNumber": 18,
+      "sourceHeading": "Một LLM được “nuôi lớn” qua 3 bước",
+      "prompt": "Ba bước huấn luyện một LLM diễn ra theo thứ tự nào?",
+      "options": [
+        "SFT → Pre-training → RLHF/DPO",
+        "RLHF/DPO → Pre-training → SFT",
+        "Pre-training → SFT → RLHF/DPO"
+      ],
+      "correctOptionIndex": 2,
+      "explanation": "Pre-training là “đọc nhiều” để học ngôn ngữ và kiến thức; SFT là “được chỉ cách trả lời” qua ví dụ hỏi-đáp mẫu; RLHF/DPO là “được uốn nắn” theo điểm chấm của con người để trở nên helpful, harmless, honest."
+    },
+    {
+      "id": "d1-08",
+      "type": "mcq",
+      "pageNumber": 22,
+      "sourceHeading": "Chain-of-Thought: chỉ thêm \"giấy nháp\", từ sai thành đúng",
+      "prompt": "“Có 5 quả bóng tennis. Mua thêm 2 hộp, mỗi hộp 3 quả. Tổng cộng bao nhiêu quả?” Đáp án đúng và bài học từ ví dụ này là gì?",
+      "options": [
+        "27 quả — model trả lời ngay luôn đúng nên không cần nháp",
+        "11 quả — cùng một model, cho viết nháp từng bước thì suy luận đúng lộ ra",
+        "11 quả — phải đổi sang model mạnh hơn mới giải được"
+      ],
+      "correctOptionIndex": 1,
+      "explanation": "5 + (2 × 3) = 11. Không nháp thì model bật ra 27 và sai; thêm “hãy nghĩ từng bước” thì vẫn model đó, vẫn câu hỏi đó, nhưng ra 11. Đây là mầm của các reasoning model."
+    },
+    {
+      "id": "d1-09",
+      "type": "mcq",
+      "pageNumber": 23,
+      "sourceHeading": "Từ LLM đến agent: bốn mức độ",
+      "prompt": "So với Level 0 (LLM trần), Level 1 thêm năng lực gì?",
+      "options": [
+        "Có tools: search web, đọc database, gọi API — vượt khỏi bong bóng thời gian",
+        "Biết tự chia mục tiêu thành nhiều bước và tự kiểm tra kết quả",
+        "Có nhiều agent chuyên biệt chia việc như một đội ngũ"
+      ],
+      "correctOptionIndex": 0,
+      "explanation": "Level 0 là LLM trần, không công cụ, không dữ liệu mới. Level 1 thêm kết nối và tools. Level 2 thêm khả năng lập kế hoạch nhiều bước. Level 3 là đội agent phối hợp."
+    },
+    {
+      "id": "d1-10",
+      "type": "short_answer",
+      "pageNumber": 27,
+      "sourceHeading": "Token có giá: vé vào rẻ, vé ra đắt gấp 3–5 lần",
+      "prompt": "Vì sao output token đắt hơn input token, và núm vặn nào giúp kiểm soát chi phí mỗi lần gọi API tốt nhất?",
+      "referenceAnswer": "Input là chữ mình gửi đi nên model chỉ cần đọc, còn output là chữ model phải tự sinh từng mảnh một nên vừa chậm vừa tốn — giá output thường đắt gấp 3 đến 5 lần input. Núm vặn lớn nhất là kiểm soát độ dài output; nên đọc mục usage trong response để theo dõi chi phí.",
+      "explanation": "Chi phí mỗi lần gọi = input tokens + output tokens. Vé vào rẻ vì model chỉ đọc; vé ra đắt vì model phải “vắt óc” sinh từng token."
+    }
+  ]
+}

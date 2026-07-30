@@ -24,122 +24,127 @@ flowchart TD
 - Problem statement (KHÔNG chữ AI):
     Khi học viên tự học một bài giảng slide và gặp một đoạn văn, diagram hoặc bảng biểu cụ thể không hiểu, họ khó diễn đạt chính xác điều mình muốn hỏi và thường phải rời khỏi tài liệu để tra cứu ở nơi khác, khiến mạch đọc bị ngắt. Vì không có cách nào xác nhận ngay tại chỗ liệu mình đã hiểu đúng hay chưa, họ tiếp tục học dựa trên một hiểu biết chưa chắc chắn — và vấn đề chỉ lộ ra khi làm quiz tổng hợp cuối buổi, lúc đã quá trễ để quay lại đúng phần đó.
 - Evidence (chuẩn A và/hoặc B — log đầy đủ trong repo):
-  - Số liệu mining / kết quả khảo sát (n = ?, % xác nhận):
+  - 20/45 (44,4%)
   - ≥5 quote/ví dụ nguyên văn + nguồn:
+    +Khi phát hiện mình hiểu sai, điều đó ảnh hưởng thế nào đến việc học của bạn 
+    +Nếu có 1 công cụ AI tự động sinh câu hỏi ôn tập, nhắm đúng phần bạn còn yếu, bạn có sẵn sàng dùng thử không?
+    +Bạn đã từng dùng cách nào để tự kiểm tra mức hiểu bài? Nếu chưa có, vì sao không dùng thường xuyên?
+    +Bạn thích với câu hỏi ôn tập dạng nào? 
+    +Bạn thường xuyên sai kiến thức ở dạng nội dung nào nhất?
+
 
 ## §2. Impact & quyết định chọn
 
 ### Bảng impact ≥3 ứng viên
 
-| # | Ứng viên (mô tả ngắn) | Bao nhiêu người gặp (từ evidence) | Tần suất | Mỗi lần tốn gì | Khả thi (Sketch/Mock/Working) |
+| # | Ứng viên  | Bao nhiêu người gặp (từ evidence) | Tần suất | Mỗi lần tốn gì | Khả thi (Sketch/Mock/Working) |
 |---|---|---|---|---|---|
-| 1 | *[VD: học viên nhận sai deadline logistics]* | *[VD: 12/80 câu hỏi — nguồn: mining Discord tuần 1-2]* | *[VD: ~3 lần/tuần]* | *[VD: nộp trễ bài → mất điểm trực tiếp]* | *[Cao / TB / Thấp — vì sao]* |
-| 2 | *[ứng viên 2]* | *[số + nguồn]* | *[tần suất]* | *[tốn gì]* | *[khả thi]* |
-| 3 | *[ứng viên 3]* | *[số + nguồn]* | *[tần suất]* | *[tốn gì]* | *[khả thi]* |
-| 4 | *[thêm nếu có]* | | | | |
-
-> Lưu ý: cột "Bao nhiêu người gặp" phải trỏ về số liệu đã có ở §1 (mining hoặc khảo sát), không áng chừng.
+| 1 | Học viên thường xuyên sai kiến thức lý thuyết vừa học | 25/45 | - |mất thời gian xem lại nhiều lần | working|
+| 2 |  | từng dùng các cách quiz/AI/ hỏi tutor để tự kiểm tra mức hiểu bài | 57,8% |tốn thời gian và công sức | working |
+| 3 | sinh viên thích câu hỏi dạng tự luận ngắn | *[số + nguồn]* | 6,7 %| *[tốn gì]* | Mock |
 
 ---
 
 ### Ứng viên ĐÃ LOẠI + vì sao
 
-**Ứng viên loại #1: [tên ứng viên]**
-- Lý do loại (bằng số, so sánh với ứng viên khác):
-  *[VD: chỉ có bằng chứng gián tiếp, không đếm được số lần cụ thể; tần suất thấp hơn ứng viên X (Y lần/tuần so với Z lần/tuần)]*
+**Ứng viên loại #1: Phạm Sỹ Đức
+- Lý do loại: thích tự luận ngắn, nằm trong 6,7%, quá ít.
 
-**Ứng viên loại #2: [tên ứng viên]**
-- Lý do loại (bằng số):
-  *[...]*
+
+**Ứng viên loại #2: Nguyễn Quang Huy
+- Lý do loại : thích tự luận ngắn , trong 6,7%
 
 ---
 
 ### Ứng viên CHỌN + vì sao (bằng số)
 
-**Ứng viên chọn: [tên ứng viên]**
+**Ứng viên chọn: Nguyễn Việt Thắng
 
-- Lý do chọn (so sánh trực tiếp bằng số với ứng viên sát nhất bị loại):
-  *[VD: tuy tần suất thấp hơn ứng viên A (12/80 so với 41/200), nhưng hậu quả mỗi lần nặng hơn (nộp trễ → mất điểm trực tiếp, không thể sửa lại), và có evidence đường B rõ ràng: phương pháp đếm — lọc câu hỏi chứa từ khoá "deadline/hạn nộp" trong 2 tuần gần nhất, đếm thủ công 2 người chéo kiểm]*
+- Lý do chọn: Thích kiểm tra bằng quiz sau mỗi bài, chiếm 57,8%
+ 
 
 ## §3. Giải pháp tương tự đã nghiên cứu
 
-> Mỗi thành viên dùng thử 1 sản phẩm gần giống (15'/người), trả lời đúng 4 câu dưới đây — quan sát cụ thể, không nhận xét chung chung kiểu "giao diện đẹp".
+
 
 | Sản phẩm | ① Họ giải job này bằng flow nào? | ② Một điều đáng học (quan sát cụ thể) | ③ Một điều đáng né | ④ Mình khác gì ở lát cắt này |
 |---|---|---|---|---|
-| *[VD: NotebookLM]* | *[VD: user paste tài liệu → hỏi → trả lời kèm số trang trích dẫn ngay dưới câu trả lời]* | *[VD: luôn cite nguồn cạnh câu trả lời, không phải cuối trang — user không phải kéo xuống tìm]* | *[VD: khi tài liệu không có thông tin, vẫn trả lời mơ hồ thay vì nói rõ "không có trong tài liệu"]* | *[VD: lát cắt của mình sẽ ép AI nói rõ "không có căn cứ" thay vì trả lời mơ hồ]* |
-| *[Sản phẩm 2, VD: Khanmigo]* | *[...]* | *[...]* | *[...]* | *[...]* |
-| *[Sản phẩm 3, VD: Quizlet AI]* | *[...]* | *[...]* | *[...]* | *[...]* |
+| NotebookLM | có thể tạo quiz tự nhiều bài giảng gộp lại | có mục tạo quiz riêng| làm khá chung chung | khi sinh viên khó hiểu 1 phần trong slide hỏi phần nào AI sẽ đào đúng sâu phần đó |
+| vlearn AI | bôi đen phần cần hỏi cho AI | có hệ thống AI tiện ích gần slide  | AI chưa bao quát được context | cung cấp context đủ rộng cho từng phần để AI hiểu |
 
 
 ## §4. Thiết kế
 
 ### Lát cắt MỘT CÂU
-*(1 user · 1 việc · 1 quyết định AI · 1 kết quả — viết gọn trong một câu, không có chữ "và" nối 2 công việc/2 quyết định khác nhau)*
-
-
+sinh viên chưa hiểu rõ bài bôi đen/khoanh vùng phần đó rồi AI lấy kiến thức bao quát và đưa về lời giải thích đầy đủ kèm quiz.
 
 ---
 
 ### Non-goals (≥3 thứ KHÔNG build)
 
-1. *[VD: Không build tính năng tự động sinh quiz mới — chỉ chấm câu trả lời user tự viết]*
-2. *[VD: Không xử lý câu hỏi ngoài phạm vi 6 buổi giảng trong data pack]*
-3. *[VD: Không lưu lịch sử học tập lâu dài qua nhiều buổi]*
-
-> Bản build **không được vi phạm** danh sách này — TA/người chấm sẽ đối chiếu.
+1. AI tự động hỏi khi sinh viên không cần
+2. AI trích dẫn thông tin bên ngoài (dễ HL)
+3. AI hỏi thêm các câu bên ngoài 
 
 ---
 
 ### Mức prototype nhắm tới
 
 - [ ] Sketch — Màn hình dựng nhanh + 1 AI call chạy demo được
-- [ ] Mock — Flow bấm được, data giả, AI thật ở lõi
-- [ ] Working — Chạy end-to-end với data pack thật
+- [✅] Mock — Flow bấm được, data giả, AI thật ở lõi
+- [✅] Working — Chạy end-to-end với data pack thật
 
 **Phần nào mock, phần nào thật:**
-- Thật: *[VD: lời gọi AI chấm hiểu-đúng/sai/mơ hồ tại quyết định trung tâm]*
-- Mock: *[VD: đăng nhập, danh sách buổi học lấy từ data giả cứng sẵn]*
+- Thật: lời gọi AI chấm hiểu-đúng/sai/mơ hồ tại quyết định trung tâm
+- Mock:  đăng nhập, danh sách buổi học lấy từ data giả cứng sẵn
 
 ---
 
 ### Automation
 
 - [ ] Augment — AI gợi ý, người quyết
-- [ ] Conditional — AI tự làm case chắc, chuyển người case mơ hồ
+- [✅] Conditional — AI tự làm case chắc, chuyển người case mơ hồ
 - [ ] Automate — AI tự làm
 
-**Lý do theo cost-of-error** *(sai thì ai chịu gì, sửa đắt hay rẻ — không viết "vì tiện"):*
+**Lý do theo cost-of-error**: kiến thức giáo dục không được sai, nên yêu cầu nếu không chắc phải để cho người dùng, không để AI tự quyết hoàn toàn.
 
 
 ---
 
 ### §4b. Nguyên tắc đã áp dụng (≥4 — HAX/PAIR)
 
-*(Tra bản gốc khi cần: microsoft.com/haxtoolkit/ai-guidelines · pair.withgoogle.com/guidebook. Bắt buộc ≥1 từ nhóm khởi đầu (G1/G2), G10 bắt buộc + ≥1 trong G8/G9/G11, còn lại tự chọn nếu hợp.)*
+1. Grounding – Trả lời có căn cứ, không suy diễn ngoài phạm vi tài liệu
 
-| Nguyên tắc | Áp cụ thể vào đâu trong prototype |
-|---|---|
-| *[VD: G2 — Làm rõ nó làm tốt đến đâu]* | *[VD: Câu mở đầu của tutor: "Mình chấm dựa trên tài liệu buổi 3; ngoài phạm vi này mình sẽ nói rõ."]* |
-| *[VD: G10 — Thu hẹp phạm vi khi nghi ngờ]* | *[VD: Khi câu trả lời học viên mơ hồ, AI hỏi lại 1 câu làm rõ thay vì đoán chấm đúng/sai]* |
-| *[VD: G11 — Giải thích vì sao]* | *[VD: Mỗi kết quả chấm kèm dòng "vì đoạn bạn viết chưa nhắc đến X ở trang 4"]* |
-| *[VD: G9 — Sửa dễ dàng]* | *[VD: Nút "trả lời lại" ngay dưới kết quả chấm, không cần thoát flow]* |
+Đây chính là nguyên tắc được thể hiện rõ nhất trong mục 10.3 của PRD. Chatbot chỉ được phép trả lời dựa trên nội dung PDF và Markdown của bài giảng (mục 10.1), tuyệt đối không dùng kiến thức bên ngoài rồi trình bày như thể nó đến từ slide. Khi hệ thống không tìm đủ căn cứ để trả lời, thay vì tự bịa ra nội dung, chatbot sẽ hiển thị thông báo "Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng" thay vì cố gắng trả lời bằng mọi giá. Nguyên tắc này giúp tránh hiện tượng ảo giác (hallucination) — lỗi phổ biến và nguy hiểm nhất của các hệ thống AI tạo sinh khi áp dụng vào giáo dục, nơi thông tin sai lệch có thể khiến người học hiểu nhầm kiến thức.
+
+2. Transparency – Minh bạch nguồn gốc câu trả lời
+
+Mọi câu trả lời của chatbot đều bắt buộc phải hiển thị số slide và đoạn trích liên quan (mục 10.2, 7.2, và các tiêu chí AC-01, AC-02). Người học không phải "tin mù" vào AI mà có thể tự đối chiếu ngược lại slide gốc để kiểm chứng. Nguyên tắc này giúp xây dựng lòng tin (trust calibration) giữa người dùng và hệ thống AI, đồng thời cho phép người học đánh giá được mức độ tin cậy của từng câu trả lời thay vì chấp nhận nó một cách thụ động.
+
+3. User control – Trao quyền kiểm soát cho người dùng
+
+Nguyên tắc này thể hiện qua cơ chế opt-out ở mục 8.5: sau mỗi micro quiz, người học có toàn quyền quyết định câu hỏi đó có được đưa vào quiz tổng hợp cuối bài hay không, và có thể thay đổi lựa chọn này bất cứ lúc nào trước khi bắt đầu làm quiz tổng hợp. Đặc biệt, mục 8.6 quy định rating và opt-out là hai hành động hoàn toàn độc lập — hệ thống không tự động loại một câu hỏi chỉ vì người học đánh giá thấp (mục 20.4). Điều này đảm bảo AI không âm thầm đưa ra quyết định thay người dùng, mà luôn để con người là người quyết định cuối cùng.
+
+4. Human-in-the-loop – Con người xác nhận trước khi công bố nội dung chính thức
+
+Ở phần AI tái tạo diagram (mục 14, 15), AI chỉ đề xuất phương án mới chứ không bao giờ tự động thay thế nội dung slide gốc. Giảng viên bắt buộc phải Approve, Regenerate hoặc Reject, và có thể chỉnh sửa thủ công trước khi hệ thống xuất bản phiên bản PDF mới (FR-24, FR-25, AC-09). Việc giữ con người trong vòng lặp kiểm duyệt trước các thay đổi có tác động lớn (ảnh hưởng đến toàn bộ người học) giúp giảm rủi ro AI tạo ra nội dung sai nhưng vẫn được lan truyền như một nguồn chính thức.
 
 
-## §5. Kiểu lỗi — 4 lớp chỗ khó + kịch bản
+# §5. Kiểu lỗi — 4 lớp chỗ khó + kịch bản
 
+*Bối cảnh sản phẩm: Hệ thống Bài giảng Slide + AI Hỗ trợ Học tập — PDF slide viewer, chatbot trích dẫn nguồn theo slide, micro quiz, quiz tổng hợp cuối bài (opt-out), smart suggestion, AI tạo lại diagram, quản lý phiên bản PDF.*
 
-| # | Lớp | Tình huống cụ thể | Hành vi mong muốn (nói gì / hiện gì / cho user làm gì tiếp) | Nguyên tắc áp (G../PAIR) |
+| # | Lớp | Tình huống cụ thể | Hành vi mong muốn (nói gì / hiện gì / cho user làm gì tiếp) | Nguyên tắc áp (G..) |
 |---|---|---|---|---|
-| 1 | ① Nguồn sự thật | *[VD: học viên hỏi về nội dung không có trong 6 transcript đã cấp]* | *[VD: AI nói rõ "không tìm thấy căn cứ trong tài liệu buổi học", không đoán/bịa; gợi ý hỏi TA]* | *[VD: G10]* |
-| 2 | ① Nguồn sự thật | *[...]* | *[...]* | *[...]* |
-| 3 | ② Mơ hồ / thiếu thông tin | *[VD: học viên nhắn cụt "cái đó là gì" không rõ ngữ cảnh]* | *[VD: AI hỏi lại 1 câu làm rõ thay vì đoán, hoặc trả lời kèm giả định rõ ràng]* | *[VD: G10, G9]* |
-| 4 | ② Mơ hồ / thiếu thông tin | *[...]* | *[...]* | *[...]* |
-| 5 | ③ Ngoài phạm vi / thẩm quyền | *[VD: học viên đòi AI làm hộ bài tập nộp điểm]* | *[VD: AI từ chối làm hộ, nhưng gợi ý hướng tự làm / chuyển TA]* | *[VD: G1]* |
-| 6 | ③ Ngoài phạm vi / thẩm quyền | *[...]* | *[...]* | *[...]* |
-| 7 | ④ Đặc thù domain | *[VD: AI trích dẫn sai số trang tài liệu]* | *[VD: mọi trích dẫn phải trace được về đúng transcript; nếu không chắc trang thì không nêu số trang]* | *[VD: G11]* |
-| 8 | ④ Đặc thù domain | *[VD: AI xác nhận "hiểu đúng" cho câu trả lời thực ra sai kiến thức]* | *[VD: ngưỡng chấm nghiêm khi liên quan kiến thức cốt lõi, thà hỏi lại còn hơn xác nhận nhầm]* | *[VD: G2]* |
-| 9 | *(thêm nếu có)* | | | |
+| 1 | ① Nguồn sự thật | Người học hỏi về một khái niệm chỉ được **nhắc tên nhưng chưa giải thích rõ** trong PDF/Markdown của bài giảng — không đủ căn cứ trong 1–2 file PDF được cấp. | AI phải trả lời đúng câu chuẩn đã định nghĩa trong PRD (mục 10.3): *"Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng"* — không tự suy diễn thêm rồi vẫn gắn nguồn slide như thể có thật; gợi ý người học hỏi giảng viên hoặc xem thêm slide liên quan. | G10 |
+| 2 | ① Nguồn sự thật | Người học khoanh vùng một diagram nhiều bước; AI đọc sai một chi tiết/nhãn trong ảnh crop nhưng vẫn diễn giải trơn tru kèm trích dẫn đúng định dạng (số slide, đoạn trích), khiến câu trả lời sai trông như có căn cứ vững. | Trích dẫn chỉ được lấy từ chunk đã thực sự truy xuất theo metadata slide (mục 20.3 PRD — "chỉ cite chunk đã truy xuất"); nếu độ tin cậy đọc ảnh thấp, AI nêu rõ mức độ chắc chắn (vd: "mình chưa chắc chắn hoàn toàn về chi tiết này") thay vì khẳng định chắc nịch. | G11, G2 |
+| 3 | ② Mơ hồ / thiếu thông tin | Người học đặt câu hỏi tự do kiểu "cái này là gì vậy" mà **không kèm highlight hay khoanh vùng**, khiến hệ thống không biết "cái này" đang chỉ tới slide/vùng nào. | AI hỏi lại 1 câu làm rõ (vd: "Bạn đang hỏi về phần nào — đoạn định nghĩa ở slide 5 hay diagram ở slide 6?") thay vì đoán đại slide người học đang xem gần nhất rồi trả lời sai ngữ cảnh. | G10 |
+| 4 | ② Mơ hồ / thiếu thông tin | Người học khoanh một vùng **lẫn cả đoạn text và một phần diagram**, hệ thống không rõ nên giải thích theo hướng nào. | AI trả lời kèm giả định rõ ràng (vd: "Mình hiểu bạn đang hỏi về diagram trong vùng này, đúng không?"), đồng thời cho phép người học chỉnh lại vùng chọn hoặc bổ sung câu hỏi nếu giả định sai. | G9 |
+| 5 | ③ Ngoài phạm vi / thẩm quyền | Người học yêu cầu chatbot **tìm kiếm thêm thông tin trên Internet** để trả lời đầy đủ hơn, dù chatbot chỉ được phép dùng PDF + Markdown nội bộ (mục 10.1, 4.2 PRD — "Tìm kiếm Internet trong chatbot" nằm ngoài phạm vi). | AI từ chối rõ ràng, giải thích giới hạn "chỉ trả lời trong phạm vi bài giảng đã cấp", gợi ý người học tự tìm nguồn ngoài nếu cần chứ không tự ý search giúp. | G1 |
+| 6 | ③ Ngoài phạm vi / thẩm quyền | Người học yêu cầu chatbot **chỉnh sửa/thay nội dung slide trực tiếp** — quyền này chỉ thuộc giảng viên/admin qua workflow Approve / Regenerate / Reject (mục 15 PRD). | AI từ chối thực hiện, giải thích đây là quyền của giảng viên, gợi ý người học gửi đánh giá/phản hồi để giảng viên xem xét chỉnh sửa sau, chứ AI không tự sửa. | G1 |
+| 7 | ④ Đặc thù domain | AI **trích dẫn sai số slide** trong câu trả lời (vd nêu "slide 5" nhưng nội dung thật nằm ở slide 7), khiến học viên tra cứu lại sai chỗ và hoang mang. | Mọi trích dẫn phải trace đúng theo metadata slide đã lưu khi chunk nội dung (mục 20.3 PRD); nếu không chắc chắn số slide, không nêu số cụ thể còn hơn nêu sai. | G11 |
+| 8 | ④ Đặc thù domain | Micro quiz đưa ra đáp án tham khảo/giải thích **sai một kiến thức cốt lõi** nhưng trình bày rất chuyên nghiệp (đúng định dạng trắc nghiệm, kèm nguồn slide), khiến học viên tin, ghi nhớ nhầm và có thể bị tính sai điểm ở quiz tổng hợp. | Ngưỡng kiểm tra nghiêm hơn với câu hỏi liên quan kiến thức cốt lõi — thà báo "chưa chắc chắn" hoặc bỏ câu đó còn hơn xác nhận nhầm; kết hợp cơ chế rating "đáp án có vẻ không chính xác" đã có sẵn ở mục 8.4 PRD để gắn cờ cho giảng viên. | G2 |
+
 
 
 
@@ -148,34 +153,34 @@ flowchart TD
 ### Happy path
 *(user dùng đúng ý định thiết kế, AI có đủ căn cứ, kết quả rõ ràng)*
 
-> *[VD: Học viên trả lời đúng ý chính → AI xác nhận "hiểu đúng" kèm trích dẫn đoạn tài liệu liên quan → học viên yên tâm chuyển sang phần tiếp theo.]*
+Học viên trả lời đúng ý chính → AI xác nhận "hiểu đúng" kèm trích dẫn đoạn tài liệu liên quan → học viên yên tâm chuyển sang phần tiếp theo.
 
 ### Low-confidence (②)
 *(input mơ hồ/thiếu thông tin — nối với kịch bản ② ở §5)*
 
-> *[VD: Câu trả lời của học viên chung chung, không rõ có nắm ý chính hay không → AI hỏi lại 1 câu làm rõ thay vì đoán chấm đúng/sai.]*
+Câu trả lời của học viên chung chung, không rõ có nắm ý chính hay không → AI hỏi lại 1 câu làm rõ thay vì đoán chấm đúng/sai.
 
 ### Failure / không căn cứ (①)
 *(AI không có đủ dữ liệu để trả lời — nối với kịch bản ① ở §5)*
 
-> *[VD: Học viên hỏi về nội dung ngoài 6 transcript đã cấp → AI nói rõ "không tìm thấy căn cứ trong tài liệu buổi học", không đoán/bịa, gợi ý hỏi TA.]*
+Học viên hỏi về nội dung ngoài 6 transcript đã cấp → AI nói rõ "không tìm thấy căn cứ trong tài liệu buổi học", không đoán/bịa, gợi ý hỏi TA.
 
 ### Correction (user sửa)
 *(user không đồng ý với output AI, và có thể sửa/phản hồi ngay trên đó)*
 
-> *[VD: Học viên bấm "trả lời lại" ngay dưới kết quả chấm, không cần thoát flow hoặc tải lại trang.]*
+Học viên bấm "trả lời lại" ngay dưới kết quả chấm, không cần thoát flow hoặc tải lại trang.
 
 ---
 
 ### Khi bị đòi ngoài phạm vi (③)
 *(user yêu cầu thứ feature không được phép làm — nối với kịch bản ③ ở §5)*
 
-> *[VD: Học viên đòi AI làm hộ bài tập nộp điểm → AI từ chối làm hộ nhưng gợi ý hướng tự làm hoặc chuyển TA, không im lặng/không đóng flow.]*
+Học viên đòi AI làm hộ bài tập nộp điểm → AI từ chối làm hộ nhưng gợi ý hướng tự làm hoặc chuyển TA, không im lặng/không đóng flow.
 
 ### Case đặc thù domain (④)
 *(lỗi khiến học viên mất điểm / học sai kiến thức / mất niềm tin ngay — nối với kịch bản ④ ở §5)*
 
-> *[VD: Khi câu trả lời liên quan kiến thức cốt lõi của bài, AI dùng ngưỡng chấm nghiêm hơn — thà hỏi lại còn hơn xác nhận nhầm "hiểu đúng" cho một câu trả lời thực ra sai.]*
+Khi câu trả lời liên quan kiến thức cốt lõi của bài, AI dùng ngưỡng chấm nghiêm hơn — thà hỏi lại còn hơn xác nhận nhầm "hiểu đúng" cho một câu trả lời thực ra sai
 
 ---
 

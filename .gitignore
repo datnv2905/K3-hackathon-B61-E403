@@ -5,3 +5,6 @@ node_modules/
 # Runtime output — never part of the submission.
 *.log
 codebase/var/
+
+CLAUDE.md
+

@@ -478,6 +478,10 @@ function buildOverviewAggregate(lesson, events) {
         optOutCount: 0,
         notUsefulReasons: new Map(),
         questionTexts: new Map(),
+        // sessionId phân biệt đã hỏi hoặc bôi đen trên trang này. Dùng làm
+        // affectedLearners — đếm NGƯỜI, không phải đếm lượt: một người hỏi 10 câu
+        // vẫn là một người, nếu không tỷ lệ trên tổng người học vọt quá 100%.
+        interactedSessions: new Set(),
       },
     ])
   );
@@ -498,13 +502,16 @@ function buildOverviewAggregate(lesson, events) {
         const bucket = bucketFor(event.pageNumber);
         if (!bucket) break;
         bucket.questionCount += 1;
+        if (event.sessionId) bucket.interactedSessions.add(event.sessionId);
         const q = text(event.question);
         if (q) bucket.questionTexts.set(q, (bucket.questionTexts.get(q) || 0) + 1);
         break;
       }
       case "selection_text": {
         const bucket = bucketFor(event.pageNumber);
-        if (bucket) bucket.highlightCount += 1;
+        if (!bucket) break;
+        bucket.highlightCount += 1;
+        if (event.sessionId) bucket.interactedSessions.add(event.sessionId);
         break;
       }
       case "quiz_generated": {
@@ -566,6 +573,7 @@ function buildOverviewAggregate(lesson, events) {
       ratingUseful: bucket.ratingUseful,
       ratingNotUseful: bucket.ratingNotUseful,
       optOutCount: bucket.optOutCount,
+      affectedLearners: bucket.interactedSessions.size,
       notUsefulReasons: [...bucket.notUsefulReasons.entries()]
         .map(([reason, count]) => ({ reason, count }))
         .sort((a, b) => b.count - a.count),
@@ -666,13 +674,18 @@ function formatCommonQuestion(q) {
 
 function normalizeSuggestion(json, page, overview) {
   const wrongRate = page.quizAttempts > 0 ? (page.quizAttempts - page.quizCorrect) / page.quizAttempts : 0;
-  const affectedLearners = page.questionCount;
-  const affectedRate = overview.totalLearners > 0 ? affectedLearners / overview.totalLearners : 0;
+  // Số NGƯỜI phân biệt đã hỏi/bôi đen trên trang này, không phải số lượt. Đếm lượt
+  // thì một người hỏi nhiều lần sẽ đẩy affectedRate vượt 100%.
+  const affectedLearners = page.affectedLearners;
+  // Chặn trên ở 1: tổng người học đếm theo cả bài, về lý thuyết luôn ≥ số người
+  // trên một trang, nhưng nếu log thiếu sessionId thì kẹp lại cho an toàn.
+  const affectedRate =
+    overview.totalLearners > 0 ? Math.min(affectedLearners / overview.totalLearners, 1) : 0;
 
   return {
     pageNumber: page.pageNumber,
     issueType: text(json.issueType) || "Cần xem lại trang này",
-    insight: text(json.insight) || "Chưa có nhận định — Gemini không trả về nội dung hợp lệ.",
+    insight: text(json.insight) || `Chưa có nhận định — ${AI_PROVIDER} không trả về nội dung hợp lệ.`,
     recommendation: text(json.recommendation) || "Xem lại trang này thủ công.",
     evidence: {
       affectedLearners,

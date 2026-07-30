@@ -246,7 +246,7 @@ async function generateSuggestion() {
       <p class="admin-suggestion-insight">${escapeHtml(data.insight)}</p>
       <p class="admin-suggestion-reco"><strong>Đề xuất:</strong> ${escapeHtml(data.recommendation)}</p>
       <dl class="admin-kv admin-evidence">
-        <div><dt>Số người hỏi (ước lượng)</dt><dd>${data.evidence.affectedLearners}</dd></div>
+        <div><dt>Số người tương tác với trang</dt><dd>${data.evidence.affectedLearners}</dd></div>
         <div><dt>Tỷ lệ trên tổng người học</dt><dd>${Math.round(data.evidence.affectedRate * 100)}%</dd></div>
         <div><dt>Tỷ lệ trả lời sai</dt><dd>${Math.round(data.evidence.wrongRate * 100)}%</dd></div>
       </dl>

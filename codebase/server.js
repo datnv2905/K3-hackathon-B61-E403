@@ -874,8 +874,33 @@ function verifyQuote(quote, page) {
   return flatten(pageCorpus(page)).includes(flatten(quote));
 }
 
+// Chuẩn hoá dấu câu kiểu chữ trước khi so khớp trích dẫn.
+//
+// Lý do có hàm này: deck dùng nháy cong “ ˮ và gạch dài —, còn model khi chép lại
+// thường tự đổi sang " và -. Nội dung y hệt, nhưng so khớp chuỗi thô thì trượt, nên
+// một trích dẫn TRUNG THỰC bị đánh dấu "chưa đối chiếu được". Golden set lượt 1
+// phát hiện đúng lỗi này: 5/12 case chiều "đúng-có-căn-cứ" trượt oan vì nó.
+//
+// Chỉ chuẩn hoá HÌNH DẠNG dấu câu, tuyệt đối không nới lỏng việc so khớp từ ngữ —
+// model diễn giải lại hay bỏ bớt nội dung thì vẫn phải trượt như cũ.
+const TYPOGRAPHIC = [
+  // Ky tu vung Private Use Area: pdf.js anh xa glyph cua font icon nhung trong PDF
+  // sang U+E000-U+F8FF. Chung vo hinh, khong mang nghia, va model khong the chep lai
+  // - nen bat ky trich dan nao di ngang qua chung deu KHONG BAO GIO khop duoc.
+  // Trang 17 cua deck co U+E08B va U+E088 giua "2020" va "GPT 3"; golden set luot 2
+  // va 3 deu truot case T24 vi dung ly do nay, mot cach tat dinh.
+  [/[\u{E000}-\u{F8FF}]/gu, " "],
+  [/[‘’‚‛ʼˮ]/g, "'"],
+  [/[“”„‟«»]/g, '"'],
+  [/[‐-―−]/g, "-"],
+  [/[…]/g, "..."],
+  [/[   ]/g, " "],
+];
+
 function flatten(value) {
-  return String(value).toLowerCase().replace(/\s+/g, " ").trim();
+  let out = String(value).toLowerCase();
+  for (const [pattern, replacement] of TYPOGRAPHIC) out = out.replace(pattern, replacement);
+  return out.replace(/\s+/g, " ").trim();
 }
 
 function normalizeQuiz(json, count, pageNumber) {

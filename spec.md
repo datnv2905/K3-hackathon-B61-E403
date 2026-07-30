@@ -1,11 +1,28 @@
-# AI SPEC — [Tên lát cắt] · Nhóm [XX] · Zone [X]
-Hướng: [ ] A — VLearn  [ ] B — Trợ lý Học viên  [ ] C — Làn mở
-Loại: [ ] Tối ưu tính năng có sẵn  [ ] Tính năng mới
+# AI SPEC — [Tên lát cắt] · Nhóm [B6-1] · Zone [3]
+Hướng: [✅] A — VLearn  [ ] B — Trợ lý Học viên  [ ] C — Làn mở
+Loại: [ ] Tối ưu tính năng có sẵn  [✅] Tính năng mới
 
 ## §1. User & Job
 - Job executor + workflow (đính kèm worksheet JTBD / ảnh sơ đồ):
+    ## Workflow
+
+```mermaid
+flowchart TD
+    A["Gặp đoạn/diagram không hiểu"] --> B["Chỉ rõ vùng cần hỏi<br/>Highlight text hoặc khoanh vùng"]
+    B --> C["Gửi ngữ cảnh cho hệ thống<br/>Số slide, tọa độ, ảnh crop"]
+    C --> D["Nhận câu trả lời<br/>Kèm trích dẫn slide + đoạn"]
+    D --> E{"Tự đánh giá:<br/>đã hiểu chưa?"}
+    E -->|"Hiểu rồi"| F["Tiếp tục đọc phần kế tiếp"]
+    E -->|"Muốn kiểm tra mức hiểu"| G["Làm micro quiz 1–3 câu<br/>Trắc nghiệm hoặc tự luận ngắn"]
+    G --> H["Nhận phản hồi đúng/sai<br/>Kèm giải thích và nguồn"]
+    H --> I["Đánh giá & chọn opt-in/out<br/>Hữu ích? Đưa vào quiz tổng hợp?"]
+    I --> F
+    F -.->|"Lặp lại khi gặp điểm khó tiếp theo"| A
+```
 - Core JTBD (không tên sản phẩm/AI trong câu):
+    Xác minh mức độ hiểu của mình về một đoạn nội dung cụ thể ngay khi vừa đọc xong, trước khi chuyển sang phần tiếp theo.
 - Problem statement (KHÔNG chữ AI):
+    Khi học viên tự học một bài giảng slide và gặp một đoạn văn, diagram hoặc bảng biểu cụ thể không hiểu, họ khó diễn đạt chính xác điều mình muốn hỏi và thường phải rời khỏi tài liệu để tra cứu ở nơi khác, khiến mạch đọc bị ngắt. Vì không có cách nào xác nhận ngay tại chỗ liệu mình đã hiểu đúng hay chưa, họ tiếp tục học dựa trên một hiểu biết chưa chắc chắn — và vấn đề chỉ lộ ra khi làm quiz tổng hợp cuối buổi, lúc đã quá trễ để quay lại đúng phần đó.
 - Evidence (chuẩn A và/hoặc B — log đầy đủ trong repo):
   - Số liệu mining / kết quả khảo sát (n = ?, % xác nhận):
   - ≥5 quote/ví dụ nguyên văn + nguồn:

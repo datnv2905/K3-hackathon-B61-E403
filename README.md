@@ -35,6 +35,17 @@
 
 Mỗi mốc cần show gì và được xác minh thế nào: xem bảng trong `04-rubric.md`.
 
+## Chạy prototype (`codebase/`)
+
+Zero-dependency Node.js — không có bước cài đặt package nào (không `npm install`, không venv). Các thư viện cần thiết (pdf.js) đã được vendor thẳng vào repo dưới `codebase/public/vendor/` và `codebase/server-vendor/`.
+
+1. Cần **Node.js ≥ 18**.
+2. Copy `.env.example` → `.env`, điền `GEMINI_API_KEY` (key thật, không commit `.env`).
+3. Chạy: `node codebase/server.js` (hoặc `npm run dev` / `npm start` — cùng một lệnh).
+4. Mở `http://localhost:3000`. Nếu cổng 3000 đang bận, server tự tìm cổng trống tiếp theo và in ra URL thật trong log.
+
+Không có `GEMINI_API_KEY` thì server vẫn chạy được (xem slide, chọn nội dung), nhưng các lời gọi AI (`/api/tutor/answer`, `/api/tutor/quiz`, `/api/tutor/grade`) trả về lỗi 503 rõ ràng thay vì giả lập.
+
 ## Nộp bài
 
 Một repo nhóm, cấu trúc như sau. Spec chốt lúc 23:59 ngày 1; bản hoàn chỉnh trước CP6.

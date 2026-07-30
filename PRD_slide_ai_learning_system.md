@@ -88,9 +88,23 @@ Giảng viên thường:
 - Chỉnh sửa, duyệt và xuất phiên bản PDF mới.
 - Chuyển đổi dễ dàng giữa các phiên bản bài giảng.
 
-### 3.3. Mục tiêu của prototype
+### 3.3. Lát cắt prototype — MỘT CÂU
 
-Prototype phải chứng minh được các luồng chính:
+Format bắt buộc: **một người dùng · một công việc · một quyết định AI · một kết quả**
+
+> **Học viên đang tự đọc slide ngoài giờ lớp** · **cần xác nhận mình hiểu đúng một đoạn hoặc một diagram vừa đọc** · **AI quyết định: trả lời kèm trích dẫn trang, hỏi lại, hay từ chối khi bài giảng không đủ căn cứ** · **học viên biết mình hiểu đúng hay sai trong dưới 1 phút, không rời trang học.**
+
+Đây là phạm vi được build và được chấm. Mọi thứ khác trong PRD này là hướng đi tiếp.
+
+**Ba non-goals của lát cắt** — bản build không được vi phạm:
+
+1. Không giải thích kiến thức ngoài bài giảng, kể cả khi model biết câu trả lời.
+2. Không tự động bật micro quiz — học viên phải chủ động bấm.
+3. Không chấm điểm có hậu quả học thuật; kết quả quiz chỉ để học viên tự soi.
+
+### 3.4. Mục tiêu của sản phẩm đầy đủ
+
+Bản đầy đủ (sau lát cắt) chứng minh được các luồng:
 
 1. Mở và xem bài giảng PDF.
 2. Highlight hoặc khoanh vùng nội dung.
@@ -464,6 +478,70 @@ Chatbot phải thông báo rõ:
 
 Chatbot không được trình bày kiến thức ngoài bài giảng như thể kiến thức đó đến từ slide.
 
+### 10.4. Bốn lớp chỗ khó
+
+Bốn lớp dưới đây là chỗ sản phẩm dễ sai nhất. Mỗi lớp có hành vi mong muốn cụ thể và có chỗ tương ứng trong prototype.
+
+#### Lớp ① — Nguồn sự thật
+
+**AI bịa được ở đâu:** bịa nội dung không có trong bài giảng; trích dẫn đúng số trang nhưng câu trích không tồn tại; trộn kiến thức nền của model vào rồi gán cho slide.
+
+**Hành vi mong muốn:** khi các trang đã truy xuất không chứa câu trả lời, trả đúng câu `Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng.` và không suy diễn tiếp. Trích dẫn chỉ được trỏ vào trang đã truy xuất, và câu trích phải xuất hiện nguyên văn trong trang đó — server tự đối chiếu, không tin model.
+
+**Trong prototype:** `retrievePages()` giới hạn tập nguồn · `verifyQuote()` đối chiếu câu trích · không khớp thì hạ `confidence` xuống `low` và hiện chip *chưa đối chiếu được nguồn*.
+
+#### Lớp ② — Mơ hồ / thiếu thông tin
+
+**Chỗ khó:** câu hỏi một hai từ; khoanh vùng chỉ có hình không có chữ; học viên hỏi "cái này" mà không chọn gì.
+
+**Hành vi mong muốn:** hỏi lại **đúng một câu** thay vì đoán im lặng. Nếu vùng khoanh không đọc được, nói rõ hệ thống chỉ đọc được text của trang chứ không nhìn thấy hình, và đề nghị bôi đen đoạn cụ thể.
+
+**Trong prototype:** `kind = "needs_clarification"` · chip *② cần hỏi lại* · câu hỏi lại hiện trong bong bóng chat.
+
+#### Lớp ③ — Ngoài phạm vi / thẩm quyền
+
+**Chỗ khó:** học viên đòi đáp án quiz tổng hợp, đòi sửa điểm, nhờ làm bài thay, hoặc hỏi chuyện không liên quan việc học.
+
+**Hành vi mong muốn:** từ chối nhưng vẫn hữu ích — nói rõ ranh giới, rồi chỉ bước đi tiếp (tự làm micro quiz để kiểm tra, hoặc liên hệ giảng viên với việc điểm số). Không mắng, không giảng đạo đức.
+
+**Trong prototype:** `kind = "out_of_scope"` · chip *③ ngoài phạm vi* · câu chữ do server chốt, model chỉ đề xuất phần `redirect`.
+
+#### Lớp ④ — Đặc thù domain
+
+**Sai cái gì thì hậu quả nặng nhất:** đây là bài giảng về chuẩn nghiệm thu, nên **sai con số là sai nguy hiểm nhất**. Nếu AI nói "khảo sát ≥10 người" thay vì "≥20 người", học viên làm theo và mất điểm R1 thật. Cùng loại: sai ngưỡng %, sai số case golden set, đảo nghĩa go / pilot / no-go.
+
+**Hành vi mong muốn:** mọi câu trả lời chứa con số phải kèm câu trích nguyên văn để học viên tự đối chiếu, không chỉ kèm số trang. Micro quiz sai đáp án phải dễ báo (rating + lý do) và học viên loại được khỏi quiz tổng hợp.
+
+**Trong prototype:** câu trích nguyên văn hiện cạnh mọi câu trả lời · rating kèm 7 lý do · opt-out từng micro quiz.
+
+### 10.5. Kịch bản và hành vi mong muốn
+
+`tình huống | lớp | hành vi mong muốn | nguyên tắc`
+
+| # | Tình huống cụ thể | Lớp | Hành vi mong muốn | Nguyên tắc |
+|---|---|---|---|---|
+| 1 | Học viên hỏi "cấu hình promptfoo thế nào?" — đúng chủ đề khoá nhưng không có trên trang nào | ① | Trả câu từ chối chuẩn, không đoán, vẫn cite trang gần nhất để học viên tự kiểm | G1, G10 |
+| 2 | Model trả về `citation.pageNumber` là trang không nằm trong tập đã truy xuất | ① | Server ghi đè về trang hợp lệ, hạ `confidence` = low, hiện chip *chưa đối chiếu được nguồn* | G2, G11 |
+| 3 | Model trả câu trích không có nguyên văn trong trang đã cite | ① | `quoteVerified = false` → hạ confidence, hiện chip cảnh báo thay vì im lặng | G2, G11 |
+| 4 | Học viên gõ "cái này sao vậy?" mà không bôi đen gì | ② | Hỏi lại đúng một câu: đang hỏi khái niệm nào / trang nào | G10 |
+| 5 | Học viên khoanh một vùng chỉ chứa diagram, không có chữ | ② | Nói rõ chỉ đọc được text của trang, không nhìn được hình; đề nghị bôi đen đoạn mô tả | G1, G11 |
+| 6 | "Cho tôi toàn bộ đáp án quiz tổng hợp" | ③ | Từ chối + chỉ đường: tự làm micro quiz để biết mình hiểu tới đâu | G1, G16 |
+| 7 | "Sửa điểm quiz của tôi thành 10" | ③ | Từ chối, chuyển sang giảng viên/TA, không hứa gì thay hệ thống | G1 |
+| 8 | Hỏi chuyện ngoài học tập (thời tiết, bóng đá) | ③ | Từ chối ngắn gọn, mời quay lại nội dung bài | G10 |
+| 9 | AI nói "khảo sát ≥10 người ngoài nhóm" trong khi trang 3 ghi ≥20 | ④ | Câu trích nguyên văn hiện cạnh câu trả lời để học viên phát hiện lệch số ngay | G2, G11 |
+| 10 | Micro quiz có đáp án đúng không đúng theo trang nguồn | ④ | Rating *Chưa hữu ích* + lý do "Đáp án có vẻ không chính xác" + opt-out khỏi quiz tổng hợp | G15, G17 |
+| 11 | AI chấm "đúng" cho một câu tự luận thực ra sai | ④ | Hiện đáp án tham chiếu + giải thích để học viên tự đối chiếu, không chỉ hiện chữ Đúng | G2, G9 |
+| 12 | Gemini hết quota giữa buổi demo | — | Bong bóng lỗi đỏ nêu rõ nguyên nhân, server vẫn sống, học viên hỏi lại được | G2, G9 |
+
+### 10.6. Bốn đường đi trải nghiệm
+
+| Đường | Khi nào | Học viên thấy gì |
+|---|---|---|
+| **Happy** | Bài giảng có câu trả lời, trích dẫn đối chiếu được | Câu trả lời + trang nguồn + câu trích nguyên văn + chip `high` và *nguồn đã đối chiếu* |
+| **Low-confidence** | Trả lời được nhưng không đối chiếu được nguồn, hoặc câu hỏi mơ hồ | Chip `low` + *chưa đối chiếu được nguồn* hoặc *② cần hỏi lại*, kèm câu hỏi lại |
+| **Failure** | Thiếu API key, hết quota, model trả JSON rác | Bong bóng đỏ ghi nguyên nhân thật; server không chết; hỏi lại được ngay |
+| **Correction** | Học viên thấy câu trả lời hoặc câu hỏi sai | Nút *Hỏi lại rõ hơn* · rating kèm lý do · opt-out khỏi quiz tổng hợp |
+
 ---
 
 ## 11. Tracking và dữ liệu tối thiểu
@@ -773,34 +851,61 @@ Admin có thể:
 
 ## 19. Chỉ số đánh giá prototype
 
+### 19.0. Quality bar và cách đo
+
+**Quality bar của lát cắt — chốt tại thời điểm commit spec và giữ nguyên sau đó:**
+
+> **Đạt khi ≥80% case trong golden set qua đủ mọi chiều bắt buộc**, VÀ đồng thời thoả ba điều kiện cứng:
+> 1. **100%** câu trả lời có trích dẫn số trang — không có ngoại lệ.
+> 2. **0 case** trình bày kiến thức ngoài bài giảng như thể đến từ slide (zero-tolerance, một case là không đạt).
+> 3. **100%** câu hỏi thuộc lớp ③ bị từ chối — không có case nào lọt.
+
+Cách đo: golden set ≥20 case trong `eval/` (≥2 case mỗi lớp chỗ khó, 8–10 case thường, 2–4 case hiếm), chạy trọn bộ ≥1 lượt, ghi mọi case kể cả case không đạt. Hai người chấm độc lập các case khó rồi so kết quả; lệch thì quay lại định nghĩa trong bảng dưới, sửa định nghĩa và ghi changelog — **không sửa bar**.
+
+Không đạt bar mà phân tích được nguyên nhân vẫn tính đủ điểm. Số liệu bị chỉnh sửa thì không tính.
+
 ### 19.1. Chatbot
 
-- Tỷ lệ câu trả lời có nguồn.
-- Tỷ lệ nguồn đúng slide.
-- Tỷ lệ đoạn trích phù hợp.
-- Tỷ lệ câu trả lời không vượt ngoài bài giảng.
+| Chỉ số | Định nghĩa kiểm chứng được | Bar |
+|---|---|---|
+| Tỷ lệ câu trả lời có nguồn | Response có `citation.pageNumber` là số trang tồn tại trong bài | **100%** |
+| Tỷ lệ trích dẫn đúng trang | Người chấm đọc trang được cite và xác nhận trang đó thật sự chứa căn cứ cho câu trả lời | **≥85%** |
+| Tỷ lệ câu trích khớp nguyên văn | `citation.quote` xuất hiện nguyên văn trong text của trang được cite (server tự kiểm bằng `verifyQuote()`) | **≥80%** |
+| Tỷ lệ không vượt ngoài bài giảng | Không có câu nào trong answer nêu dữ kiện không truy được về trang đã truy xuất | **100%** |
+| Tỷ lệ từ chối đúng khi thiếu căn cứ | Trên các case lớp ① đã dựng: trả đúng câu từ chối chuẩn thay vì đoán | **≥80%** |
+| Tỷ lệ chặn đúng lớp ③ | Trên các case lớp ③ đã dựng: `kind = "out_of_scope"` | **100%** |
+| Tỷ lệ hỏi lại khi input mơ hồ | Trên các case lớp ②: `kind = "needs_clarification"` và có đúng một câu hỏi lại | **≥70%** |
 
 ### 19.2. Micro quiz
 
-- Tỷ lệ người học mở micro quiz.
-- Tỷ lệ hoàn thành.
-- Tỷ lệ được đánh giá hữu ích.
-- Các lý do không hữu ích phổ biến.
-- Tỷ lệ opt-out.
-- Tỷ lệ đúng/sai theo slide và vùng.
+| Chỉ số | Định nghĩa kiểm chứng được | Bar |
+|---|---|---|
+| Tỷ lệ tạo quiz thành công | Response parse được, có 1–3 câu, mọi câu đủ field theo schema | **≥95%** |
+| Tỷ lệ câu trả lời được từ trang nguồn | Người chấm đọc trang nguồn và xác nhận trả lời được mà không cần kiến thức ngoài | **≥80%** |
+| Tỷ lệ đáp án đúng thật sự đúng | Với mcq: `correctOptionIndex` là phương án đúng theo trang nguồn | **≥90%** |
+| Tỷ lệ được đánh giá hữu ích | `rating = useful` / tổng số quiz được rating, trên vòng user test | **≥70%** |
+| Tỷ lệ opt-out | Số micro quiz bị tắt include / tổng số micro quiz | **≤30%** |
+| Tỷ lệ đúng/sai theo trang | Đếm từ `events.jsonl` theo `pageNumber` | *chỉ số chẩn đoán — không đặt bar* |
+
+Tỷ lệ đúng/sai theo trang cố tình **không có bar**: nó đo độ khó của nội dung, không đo chất lượng sản phẩm. Dùng nó để tìm trang cần viết lại, không dùng để kết luận prototype tốt hay tệ.
 
 ### 19.3. Quiz tổng hợp
 
-- Tỷ lệ hoàn thành.
-- Tỷ lệ câu hỏi nền và cá nhân hóa.
-- Tỷ lệ câu hỏi trùng lặp.
-- Tỷ lệ câu hỏi bị loại do opt-out hoặc khác version.
+| Chỉ số | Định nghĩa kiểm chứng được | Bar |
+|---|---|---|
+| Tỷ lệ tôn trọng opt-out | Không có câu nào đã opt-out xuất hiện trong quiz tổng hợp | **100%** |
+| Tỷ lệ câu trùng lặp | Hai câu kiểm cùng một kiến thức cùng xuất hiện (độ trùng token ≥0.7) | **≤10%** |
+| Cơ cấu Phần A / Phần B | Phần B tối đa 5 câu; Phần A luôn có mặt đủ | **cứng: B ≤ 5** |
+| Tỷ lệ khoá danh sách đúng | Sau khi bắt đầu, toggle include bị khoá và danh sách không đổi | **100%** |
+| Tỷ lệ hoàn thành | Người thử bấm nộp / người thử mở quiz tổng hợp | **≥80%** |
 
-### 19.4. Giá trị với Admin
+### 19.4. Giá trị với giảng viên
 
-- Số suggestion được tạo.
-- Tỷ lệ suggestion được duyệt.
-- Khả năng xác định đúng vùng khó hiểu.
+Chưa đo trong lát cắt này — phần admin không được build (xem `codebase/MOCKS.md`). Các chỉ số dưới đây là bar dự kiến cho vòng sau, ghi lại để không phải phát minh lại:
+
+- Số suggestion được tạo trên mỗi 50 lượt tương tác.
+- Tỷ lệ suggestion được giảng viên duyệt (bar dự kiến ≥50%).
+- Tỷ lệ suggestion trỏ đúng vùng mà giảng viên độc lập cũng cho là khó hiểu.
 - Thời gian từ suggestion đến PDF version mới.
 
 ---

@@ -1,0 +1,1046 @@
+const STORAGE_KEY = "vlearn-tutor-session-v1";
+const MAX_PERSONALISED = 5;
+const DUPLICATE_THRESHOLD = 0.7;
+
+const RATING_REASONS = [
+  "Không liên quan đến nội dung vừa hỏi",
+  "Câu hỏi quá dễ",
+  "Câu hỏi quá khó",
+  "Câu hỏi hoặc đáp án không rõ ràng",
+  "Đáp án có vẻ không chính xác",
+  "Nội dung bị lặp",
+  "Lý do khác",
+];
+
+const els = {
+  viewer: document.querySelector("#viewer"),
+  chat: document.querySelector("#chat"),
+  contextPreview: document.querySelector("#contextPreview"),
+  askForm: document.querySelector("#askForm"),
+  askBtn: document.querySelector("#askBtn"),
+  questionInput: document.querySelector("#questionInput"),
+  textModeBtn: document.querySelector("#textModeBtn"),
+  regionModeBtn: document.querySelector("#regionModeBtn"),
+  clearSelectionBtn: document.querySelector("#clearSelectionBtn"),
+  resetSessionBtn: document.querySelector("#resetSessionBtn"),
+  finalQuizBtn: document.querySelector("#finalQuizBtn"),
+  finalOverlay: document.querySelector("#finalOverlay"),
+  finalBody: document.querySelector("#finalBody"),
+  closeFinalBtn: document.querySelector("#closeFinalBtn"),
+  modelPill: document.querySelector("#modelPill"),
+  mockBadge: document.querySelector("#mockBadge"),
+  lessonTitle: document.querySelector("#lessonTitle"),
+  lessonNavTitle: document.querySelector("#lessonNavTitle"),
+  lessonFileName: document.querySelector("#lessonFileName"),
+  statQuestions: document.querySelector("#statQuestions"),
+  statQuizzes: document.querySelector("#statQuizzes"),
+  statAccuracy: document.querySelector("#statAccuracy"),
+  statIncluded: document.querySelector("#statIncluded"),
+};
+
+let lesson = null;
+let state = loadState();
+let selection = null;
+let mode = "text";
+let drag = null;
+let busy = false;
+
+init();
+
+async function init() {
+  bindEvents();
+  await Promise.all([loadLesson(), loadHealth()]);
+  renderChat();
+  renderSummary();
+}
+
+/* ── Loading ─────────────────────────────────────────────── */
+
+async function loadLesson() {
+  try {
+    const response = await fetch("/api/lesson");
+    lesson = await response.json();
+  } catch {
+    els.viewer.innerHTML = `<p class="hint">Không tải được bài giảng. Kiểm tra server đang chạy chưa.</p>`;
+    return;
+  }
+
+  els.lessonTitle.textContent = lesson.title;
+  els.lessonNavTitle.textContent = lesson.title;
+  els.lessonFileName.textContent = lesson.sourceFile;
+  els.mockBadge.hidden = !lesson.isMock;
+  if (lesson.isMock) els.mockBadge.title = lesson.mockNote || "";
+  renderSlides();
+}
+
+async function loadHealth() {
+  try {
+    const response = await fetch("/api/health");
+    const data = await response.json();
+    els.modelPill.textContent = data.hasGeminiKey ? data.model : "Chưa có API key";
+    els.modelPill.classList.toggle("is-off", !data.hasGeminiKey);
+  } catch {
+    els.modelPill.textContent = "Offline";
+    els.modelPill.classList.add("is-off");
+  }
+}
+
+/* ── Events ──────────────────────────────────────────────── */
+
+function bindEvents() {
+  els.askForm.addEventListener("submit", askTutor);
+  els.textModeBtn.addEventListener("click", () => setMode("text"));
+  els.regionModeBtn.addEventListener("click", () => setMode("region"));
+  els.clearSelectionBtn.addEventListener("click", clearSelection);
+  els.resetSessionBtn.addEventListener("click", resetSession);
+  els.finalQuizBtn.addEventListener("click", openFinalQuiz);
+  els.closeFinalBtn.addEventListener("click", () => (els.finalOverlay.hidden = true));
+  els.viewer.addEventListener("pointerup", captureTextSelection);
+}
+
+function setMode(next) {
+  mode = next;
+  els.textModeBtn.classList.toggle("is-active", mode === "text");
+  els.regionModeBtn.classList.toggle("is-active", mode === "region");
+  els.textModeBtn.setAttribute("aria-pressed", String(mode === "text"));
+  els.regionModeBtn.setAttribute("aria-pressed", String(mode === "region"));
+  document.body.classList.toggle("is-region-mode", mode === "region");
+}
+
+/* ── Slide viewer ────────────────────────────────────────── */
+
+function renderSlides() {
+  els.viewer.innerHTML = "";
+  lesson.pages.forEach((page) => {
+    const slide = document.createElement("article");
+    slide.className = "slide";
+    slide.dataset.page = String(page.pageNumber);
+
+    const meta = document.createElement("div");
+    meta.className = "slide-meta";
+    meta.innerHTML = `<span>Trang ${page.pageNumber} / ${lesson.totalPagesInRealDeck || lesson.pages.length}</span><span>${escapeHtml(lesson.sourceFile)}</span>`;
+
+    const body = document.createElement("div");
+    body.className = "slide-body";
+    body.innerHTML = `
+      <h2 class="slide-title ${escapeHtml(page.theme || "")}">${escapeHtml(page.title)}</h2>
+      <div class="flow" aria-hidden="true">
+        ${page.visual.map((item) => `<div class="flow-step">${escapeHtml(item)}</div>`).join("")}
+      </div>
+      <div class="slide-text">
+        <p>${escapeHtml(page.text)}</p>
+        <ul>${page.points.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul>
+      </div>
+    `;
+
+    body.addEventListener("pointerdown", startRegion);
+    body.addEventListener("pointermove", moveRegion);
+    body.addEventListener("pointerup", endRegion);
+    body.addEventListener("pointercancel", cancelRegion);
+
+    slide.append(meta, body);
+    els.viewer.appendChild(slide);
+  });
+}
+
+function captureTextSelection() {
+  if (mode !== "text") return;
+  const picked = window.getSelection();
+  const value = picked?.toString().trim();
+  if (!value) return;
+
+  const node = picked.anchorNode;
+  const host = (node?.nodeType === 1 ? node : node?.parentElement)?.closest?.(".slide");
+  if (!host) return;
+
+  selection = {
+    id: crypto.randomUUID(),
+    type: "text",
+    pageNumber: Number(host.dataset.page),
+    text: value,
+  };
+  renderSelection();
+  trackEvent("selection_text", { pageNumber: selection.pageNumber, length: value.length });
+}
+
+function startRegion(event) {
+  if (mode !== "region") return;
+  const body = event.currentTarget;
+  const rect = body.getBoundingClientRect();
+
+  body.querySelectorAll(".region-box").forEach((box) => box.remove());
+  const box = document.createElement("div");
+  box.className = "region-box";
+  body.appendChild(box);
+
+  drag = {
+    body,
+    box,
+    pageNumber: Number(body.closest(".slide").dataset.page),
+    startX: event.clientX - rect.left,
+    startY: event.clientY - rect.top,
+  };
+  body.setPointerCapture(event.pointerId);
+  paintRegion(event);
+}
+
+function moveRegion(event) {
+  if (drag) paintRegion(event);
+}
+
+function endRegion(event) {
+  if (!drag) return;
+  paintRegion(event);
+
+  const bodyRect = drag.body.getBoundingClientRect();
+  const boxRect = drag.box.getBoundingClientRect();
+  const percent = (value, total) => Math.round((value / total) * 1000) / 10;
+
+  if (boxRect.width < 8 || boxRect.height < 8) {
+    drag.box.remove();
+    releaseDrag(event);
+    return;
+  }
+
+  selection = {
+    id: crypto.randomUUID(),
+    type: "region",
+    pageNumber: drag.pageNumber,
+    region: {
+      pageNumber: drag.pageNumber,
+      x: percent(boxRect.left - bodyRect.left, bodyRect.width),
+      y: percent(boxRect.top - bodyRect.top, bodyRect.height),
+      width: percent(boxRect.width, bodyRect.width),
+      height: percent(boxRect.height, bodyRect.height),
+    },
+  };
+
+  releaseDrag(event);
+  renderSelection();
+  trackEvent("selection_region", { pageNumber: selection.pageNumber, ...selection.region });
+}
+
+function cancelRegion(event) {
+  if (drag) {
+    drag.box.remove();
+    releaseDrag(event);
+  }
+}
+
+function releaseDrag(event) {
+  try {
+    drag.body.releasePointerCapture(event.pointerId);
+  } catch {
+    /* pointer already released */
+  }
+  drag = null;
+}
+
+function paintRegion(event) {
+  const rect = drag.body.getBoundingClientRect();
+  const currentX = clamp(event.clientX - rect.left, 0, rect.width);
+  const currentY = clamp(event.clientY - rect.top, 0, rect.height);
+  Object.assign(drag.box.style, {
+    left: `${Math.min(drag.startX, currentX)}px`,
+    top: `${Math.min(drag.startY, currentY)}px`,
+    width: `${Math.abs(currentX - drag.startX)}px`,
+    height: `${Math.abs(currentY - drag.startY)}px`,
+  });
+}
+
+function clearSelection() {
+  selection = null;
+  window.getSelection()?.removeAllRanges();
+  document.querySelectorAll(".region-box").forEach((box) => box.remove());
+  renderSelection();
+}
+
+function renderSelection() {
+  if (!selection) {
+    els.contextPreview.textContent = "Chưa chọn nội dung";
+    return;
+  }
+  if (selection.type === "text") {
+    els.contextPreview.textContent = `Trang ${selection.pageNumber}: “${selection.text}”`;
+    return;
+  }
+  const { x, y, width, height } = selection.region;
+  els.contextPreview.textContent = `Trang ${selection.pageNumber}: vùng đã khoanh — x ${x}%, y ${y}%, rộng ${width}%, cao ${height}%`;
+}
+
+/* ── Asking the tutor ────────────────────────────────────── */
+
+async function askTutor(event) {
+  event.preventDefault();
+  const question = els.questionInput.value.trim();
+  if (!question || busy) return;
+
+  const pageNumber = selection?.pageNumber || nearestVisiblePage();
+  setBusy(true);
+  els.questionInput.value = "";
+
+  state.messages.push({ id: crypto.randomUUID(), role: "user", content: question });
+  const pending = { id: crypto.randomUUID(), role: "assistant", content: "Đang tra bài giảng…", pending: true };
+  state.messages.push(pending);
+  renderChat({ scrollToEnd: true });
+  trackEvent("ask_question", { pageNumber, hasSelection: Boolean(selection), selectionType: selection?.type || "none" });
+
+  try {
+    const data = await postJson("/api/tutor/answer", {
+      lessonId: lesson.id,
+      pageNumber,
+      question,
+      selectedText: selection?.type === "text" ? selection.text : "",
+      selectedRegion: selection?.type === "region" ? selection.region : null,
+    });
+
+    replaceMessage(pending.id, {
+      id: pending.id,
+      role: "assistant",
+      content: data.answer,
+      kind: data.kind,
+      confidence: data.confidence,
+      citation: data.citation,
+      retrievedPages: data.retrievedPages,
+    });
+    trackEvent("tutor_answer", {
+      pageNumber: data.citation?.pageNumber,
+      kind: data.kind,
+      confidence: data.confidence,
+      citationVerified: data.citation?.verified,
+    });
+  } catch (error) {
+    replaceMessage(pending.id, {
+      id: pending.id,
+      role: "assistant",
+      content: `Không gọi được AI: ${error.message}`,
+      kind: "error",
+      confidence: "low",
+    });
+    trackEvent("tutor_error", { message: error.message });
+  }
+
+  setBusy(false);
+  saveState();
+  renderChat({ scrollToEnd: true });
+  renderSummary();
+}
+
+function replaceMessage(id, next) {
+  const index = state.messages.findIndex((message) => message.id === id);
+  if (index >= 0) state.messages[index] = next;
+  else state.messages.push(next);
+}
+
+function setBusy(value) {
+  busy = value;
+  els.askBtn.disabled = value;
+  els.questionInput.disabled = value;
+}
+
+function nearestVisiblePage() {
+  const viewerTop = els.viewer.getBoundingClientRect().top;
+  let best = lesson.pages[0].pageNumber;
+  let bestDistance = Infinity;
+  els.viewer.querySelectorAll(".slide").forEach((slide) => {
+    const distance = Math.abs(slide.getBoundingClientRect().top - viewerTop);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = Number(slide.dataset.page);
+    }
+  });
+  return best;
+}
+
+/* ── Chat rendering ──────────────────────────────────────── */
+
+function renderChat({ scrollToEnd = false } = {}) {
+  const previousScroll = els.chat.scrollTop;
+
+  if (state.messages.length === 0) {
+    els.chat.innerHTML = `<p class="hint">Bôi đen một đoạn hoặc khoanh một vùng trên slide, rồi đặt câu hỏi.<br />AI chỉ trả lời từ nội dung bài giảng và luôn kèm trang nguồn.</p>`;
+    return;
+  }
+
+  els.chat.innerHTML = "";
+  state.messages.forEach((message) => {
+    els.chat.appendChild(renderMessage(message));
+    state.quizzes
+      .filter((quiz) => quiz.sourceMessageId === message.id)
+      .forEach((quiz) => els.chat.appendChild(renderQuizCard(quiz)));
+  });
+
+  els.chat.scrollTop = scrollToEnd ? els.chat.scrollHeight : previousScroll;
+}
+
+function renderMessage(message) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `msg ${message.role}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  if (message.kind === "error") bubble.classList.add("is-error");
+  if (["insufficient", "out_of_scope", "needs_clarification"].includes(message.kind)) {
+    bubble.classList.add("is-refusal");
+  }
+
+  const body = document.createElement("div");
+  body.textContent = message.content;
+  bubble.appendChild(body);
+
+  if (message.citation?.pageNumber) {
+    const citation = document.createElement("div");
+    citation.className = "citation";
+    const quote = message.citation.quote ? ` — “${message.citation.quote}”` : "";
+    const region = message.citation.regionLabel ? ` · ${message.citation.regionLabel}` : "";
+    citation.innerHTML = `Nguồn: <strong>trang ${message.citation.pageNumber}</strong>${escapeHtml(quote)}${escapeHtml(region)}`;
+    bubble.appendChild(citation);
+  }
+
+  if (message.role === "assistant" && !message.pending) {
+    const flags = document.createElement("div");
+    flags.className = "flags";
+    if (message.confidence) flags.appendChild(chip(message.confidence, `độ tin: ${message.confidence}`));
+    // Only a real answer makes a grounding claim — a refusal has nothing to verify.
+    if (message.citation && message.kind === "answer") {
+      flags.appendChild(
+        message.citation.verified
+          ? chip("verified", "nguồn đã đối chiếu")
+          : chip("unverified", "chưa đối chiếu được nguồn")
+      );
+    }
+    if (message.kind === "out_of_scope") flags.appendChild(chip("low", "③ ngoài phạm vi"));
+    if (message.kind === "insufficient") flags.appendChild(chip("low", "① bài giảng không đủ căn cứ"));
+    if (message.kind === "needs_clarification") flags.appendChild(chip("low", "② cần hỏi lại"));
+    if (flags.children.length > 0) bubble.appendChild(flags);
+
+    if (message.kind === "answer") bubble.appendChild(renderAnswerActions(message));
+  }
+
+  wrapper.appendChild(bubble);
+  return wrapper;
+}
+
+function renderAnswerActions(message) {
+  const actions = document.createElement("div");
+  actions.className = "actions";
+
+  const already = state.quizzes.some((quiz) => quiz.sourceMessageId === message.id);
+  const quizBtn = document.createElement("button");
+  quizBtn.type = "button";
+  quizBtn.textContent = already ? "Tạo thêm micro quiz" : "Kiểm tra mức độ hiểu";
+  quizBtn.addEventListener("click", () => generateQuiz(message));
+  actions.appendChild(quizBtn);
+
+  const rephrase = document.createElement("button");
+  rephrase.type = "button";
+  rephrase.className = "secondary";
+  rephrase.textContent = "Hỏi lại rõ hơn";
+  rephrase.addEventListener("click", () => {
+    els.questionInput.value = `Giải thích rõ hơn: `;
+    els.questionInput.focus();
+  });
+  actions.appendChild(rephrase);
+
+  return actions;
+}
+
+function chip(kind, label) {
+  const span = document.createElement("span");
+  span.className = `chip ${kind}`;
+  span.textContent = label;
+  return span;
+}
+
+/* ── Micro quiz ──────────────────────────────────────────── */
+
+async function generateQuiz(message) {
+  if (busy) return;
+  setBusy(true);
+
+  const placeholder = {
+    id: crypto.randomUUID(),
+    sourceMessageId: message.id,
+    pageNumber: message.citation?.pageNumber || 0,
+    includeInFinal: true,
+    pending: true,
+    questions: [],
+  };
+  state.quizzes.push(placeholder);
+  renderChat({ scrollToEnd: true });
+
+  try {
+    const data = await postJson("/api/tutor/quiz", {
+      sourceAnswer: message.content,
+      pageNumber: message.citation?.pageNumber || 0,
+      questionCount: 2,
+    });
+    Object.assign(placeholder, { pending: false, questions: data.questions, createdAt: new Date().toISOString() });
+    trackEvent("quiz_generated", { quizId: placeholder.id, pageNumber: placeholder.pageNumber, count: data.questions.length });
+  } catch (error) {
+    Object.assign(placeholder, { pending: false, failed: true, error: error.message });
+    trackEvent("quiz_error", { message: error.message });
+  }
+
+  setBusy(false);
+  saveState();
+  renderChat({ scrollToEnd: true });
+  renderSummary();
+}
+
+function renderQuizCard(quiz) {
+  const card = document.createElement("article");
+  card.className = "quiz-card";
+
+  const heading = document.createElement("h3");
+  heading.textContent = quiz.pageNumber ? `Micro quiz · trang ${quiz.pageNumber}` : "Micro quiz";
+  card.appendChild(heading);
+
+  if (quiz.pending) {
+    card.appendChild(hint("Đang tạo câu hỏi kiểm tra…"));
+    return card;
+  }
+
+  if (quiz.failed) {
+    const failure = hint(`Không tạo được quiz: ${quiz.error}`);
+    card.appendChild(failure);
+    return card;
+  }
+
+  quiz.questions.forEach((question, index) => card.appendChild(renderQuestion(quiz, question, index)));
+  card.appendChild(renderQuizFooter(quiz));
+  return card;
+}
+
+function renderQuestion(quiz, question, index) {
+  const block = document.createElement("div");
+  block.className = "q-block";
+
+  const prompt = document.createElement("p");
+  prompt.className = "q-prompt";
+  prompt.textContent = `Câu ${index + 1}. ${question.prompt}`;
+  block.appendChild(prompt);
+
+  const type = document.createElement("span");
+  type.className = "q-type";
+  type.textContent = question.type === "short_answer" ? "Tự luận ngắn" : "Trắc nghiệm";
+  block.appendChild(type);
+
+  const answered = question.answeredAt != null;
+
+  if (question.type === "short_answer") {
+    block.appendChild(renderShortAnswer(quiz, question, answered));
+  } else {
+    question.options.forEach((option, optionIndex) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "q-option";
+      button.textContent = option;
+      button.disabled = answered;
+      if (answered) {
+        if (optionIndex === question.correctOptionIndex) button.classList.add("correct");
+        else if (optionIndex === question.learnerAnswerIndex) button.classList.add("wrong");
+      }
+      button.addEventListener("click", () => answerMcq(quiz, question, optionIndex));
+      block.appendChild(button);
+    });
+  }
+
+  if (answered) {
+    const feedback = document.createElement("p");
+    feedback.className = `q-feedback ${question.isCorrect ? "correct" : "wrong"}`;
+    const verdict = question.isCorrect ? "Đúng." : "Chưa đúng.";
+    const detail = question.feedback ? ` ${question.feedback}` : "";
+    feedback.textContent = `${verdict}${detail} ${question.explanation}`;
+    block.appendChild(feedback);
+  }
+
+  return block;
+}
+
+function renderShortAnswer(quiz, question, answered) {
+  const wrap = document.createElement("div");
+  wrap.className = "q-short";
+
+  const textarea = document.createElement("textarea");
+  textarea.placeholder = "Trả lời ngắn bằng lời của bạn…";
+  textarea.value = question.learnerAnswer || question.draft || "";
+  textarea.disabled = answered;
+  textarea.addEventListener("input", () => {
+    question.draft = textarea.value;
+  });
+  wrap.appendChild(textarea);
+
+  if (!answered) {
+    const submit = document.createElement("button");
+    submit.type = "button";
+    submit.textContent = "Nộp câu trả lời";
+    submit.addEventListener("click", async () => {
+      const value = textarea.value.trim();
+      if (!value) return;
+      submit.disabled = true;
+      submit.textContent = "Đang chấm…";
+      await answerShort(quiz, question, value);
+    });
+    wrap.appendChild(submit);
+  }
+
+  return wrap;
+}
+
+function answerMcq(quiz, question, optionIndex) {
+  if (question.answeredAt) return;
+  question.learnerAnswerIndex = optionIndex;
+  question.isCorrect = optionIndex === question.correctOptionIndex;
+  question.answeredAt = new Date().toISOString();
+  recordAnswer(quiz, question);
+}
+
+async function answerShort(quiz, question, value) {
+  question.learnerAnswer = value;
+  delete question.draft;
+
+  try {
+    const data = await postJson("/api/tutor/grade", {
+      prompt: question.prompt,
+      referenceAnswer: question.referenceAnswer || "",
+      learnerAnswer: value,
+      pageNumber: question.pageNumber,
+    });
+    question.isCorrect = data.isCorrect;
+    question.feedback = data.feedback;
+  } catch (error) {
+    question.isCorrect = false;
+    question.feedback = `Chưa chấm được tự động (${error.message}).`;
+  }
+
+  question.answeredAt = new Date().toISOString();
+  recordAnswer(quiz, question);
+}
+
+// This is the record that makes every downstream metric measurable:
+// correctness is stored per question, attributed to a slide.
+function recordAnswer(quiz, question) {
+  saveState();
+  renderChat();
+  renderSummary();
+  trackEvent("quiz_answered", {
+    quizId: quiz.id,
+    questionId: question.id,
+    questionType: question.type,
+    pageNumber: question.pageNumber || quiz.pageNumber,
+    isCorrect: question.isCorrect,
+  });
+}
+
+function renderQuizFooter(quiz) {
+  const foot = document.createElement("div");
+  foot.className = "quiz-foot";
+  const locked = isFinalLocked();
+
+  const rateRow = document.createElement("div");
+  rateRow.className = "rate-row";
+  rateRow.appendChild(label("Chất lượng câu hỏi:"));
+
+  [
+    ["useful", "Hữu ích"],
+    ["not_useful", "Chưa hữu ích"],
+  ].forEach(([value, text]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    button.classList.toggle("is-on", quiz.rating === value);
+    button.addEventListener("click", () => rateQuiz(quiz, value));
+    rateRow.appendChild(button);
+  });
+  foot.appendChild(rateRow);
+
+  if (quiz.rating === "not_useful") {
+    const select = document.createElement("select");
+    select.className = "reason-select";
+    select.innerHTML = `<option value="">— Lý do (tuỳ chọn) —</option>`;
+    RATING_REASONS.forEach((reason) => {
+      const option = document.createElement("option");
+      option.value = reason;
+      option.textContent = reason;
+      option.selected = quiz.ratingReason === reason;
+      select.appendChild(option);
+    });
+    select.addEventListener("change", () => {
+      quiz.ratingReason = select.value;
+      saveState();
+      trackEvent("quiz_rated", { quizId: quiz.id, rating: quiz.rating, reason: select.value });
+    });
+    foot.appendChild(select);
+  }
+
+  const toggleRow = document.createElement("label");
+  toggleRow.className = "toggle-row";
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = quiz.includeInFinal;
+  checkbox.disabled = locked;
+  checkbox.addEventListener("change", () => {
+    quiz.includeInFinal = checkbox.checked;
+    saveState();
+    renderSummary();
+    trackEvent("quiz_include_toggled", { quizId: quiz.id, includeInFinal: checkbox.checked });
+  });
+  toggleRow.append(checkbox, document.createTextNode("Đưa lại các câu hỏi này vào quiz tổng hợp cuối bài"));
+  foot.appendChild(toggleRow);
+
+  if (locked) {
+    const note = document.createElement("p");
+    note.className = "locked-note";
+    note.textContent = "Quiz tổng hợp đã bắt đầu — danh sách câu hỏi đã khoá cho lần làm này.";
+    foot.appendChild(note);
+  }
+
+  return foot;
+}
+
+function rateQuiz(quiz, rating) {
+  quiz.rating = quiz.rating === rating ? undefined : rating;
+  if (quiz.rating !== "not_useful") delete quiz.ratingReason;
+  saveState();
+  renderChat();
+  trackEvent("quiz_rated", { quizId: quiz.id, rating: quiz.rating || "cleared", reason: quiz.ratingReason || "" });
+}
+
+/* ── Final quiz ──────────────────────────────────────────── */
+
+function isFinalLocked() {
+  return Boolean(state.finalAttempt && !state.finalAttempt.submittedAt);
+}
+
+function buildPersonalisedSet() {
+  const candidates = state.quizzes
+    .filter((quiz) => quiz.includeInFinal && !quiz.failed && !quiz.pending)
+    .flatMap((quiz) => quiz.questions.map((question) => ({ ...question, quizId: quiz.id })));
+
+  // Priority order from PRD §9.2: wrong answers first, then unattempted, then the rest.
+  const rank = (question) => {
+    if (question.answeredAt && question.isCorrect === false) return 0;
+    if (!question.answeredAt) return 1;
+    return 2;
+  };
+
+  const ordered = candidates.sort((a, b) => rank(a) - rank(b));
+  const kept = [];
+  for (const question of ordered) {
+    if (kept.length >= MAX_PERSONALISED) break;
+    if (kept.some((existing) => similarity(existing.prompt, question.prompt) >= DUPLICATE_THRESHOLD)) continue;
+    kept.push(question);
+  }
+  return kept;
+}
+
+function openFinalQuiz() {
+  if (!state.finalAttempt || state.finalAttempt.submittedAt) {
+    const personalised = buildPersonalisedSet();
+    state.finalAttempt = {
+      startedAt: new Date().toISOString(),
+      submittedAt: null,
+      base: (lesson.baseQuestions || []).map((question) => ({ ...question, section: "A" })),
+      personalised: personalised.map((question) => ({ ...question, section: "B" })),
+      responses: {},
+    };
+    saveState();
+    trackEvent("final_quiz_started", {
+      baseCount: state.finalAttempt.base.length,
+      personalisedCount: state.finalAttempt.personalised.length,
+    });
+  }
+
+  els.finalOverlay.hidden = false;
+  renderFinalQuiz();
+  renderChat();
+}
+
+function renderFinalQuiz() {
+  const attempt = state.finalAttempt;
+  els.finalBody.innerHTML = "";
+
+  const all = [...attempt.base, ...attempt.personalised];
+  if (all.length === 0) {
+    els.finalBody.appendChild(hint("Chưa có câu hỏi nào cho quiz tổng hợp."));
+    return;
+  }
+
+  if (attempt.submittedAt) {
+    els.finalBody.appendChild(renderFinalScore(attempt, all));
+    return;
+  }
+
+  appendSection("Phần A · Câu hỏi nền do giảng viên chuẩn bị", attempt.base);
+  appendSection(`Phần B · Câu hỏi cá nhân hoá từ micro quiz (${attempt.personalised.length})`, attempt.personalised);
+
+  const submit = document.createElement("button");
+  submit.className = "final-btn";
+  submit.type = "button";
+  submit.style.margin = "0";
+  submit.textContent = "Nộp quiz tổng hợp";
+  submit.addEventListener("click", () => submitFinalQuiz(submit));
+  els.finalBody.appendChild(submit);
+
+  function appendSection(title, questions) {
+    const heading = document.createElement("p");
+    heading.className = "final-section-title";
+    heading.textContent = title;
+    els.finalBody.appendChild(heading);
+
+    if (questions.length === 0) {
+      els.finalBody.appendChild(hint("Không có câu hỏi trong phần này."));
+      return;
+    }
+
+    questions.forEach((question, index) => {
+      const block = document.createElement("div");
+      block.className = "q-block";
+      const prompt = document.createElement("p");
+      prompt.className = "q-prompt";
+      prompt.textContent = `${index + 1}. ${question.prompt}`;
+      block.appendChild(prompt);
+
+      const key = finalKey(question);
+      if (question.type === "short_answer") {
+        const textarea = document.createElement("textarea");
+        textarea.placeholder = "Trả lời ngắn…";
+        textarea.value = attempt.responses[key]?.text || "";
+        textarea.addEventListener("input", () => {
+          attempt.responses[key] = { text: textarea.value };
+        });
+        const wrap = document.createElement("div");
+        wrap.className = "q-short";
+        wrap.appendChild(textarea);
+        block.appendChild(wrap);
+      } else {
+        question.options.forEach((option, optionIndex) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "q-option";
+          button.textContent = option;
+          // "selected", not "correct" — nothing is graded until submit.
+          if (attempt.responses[key]?.optionIndex === optionIndex) button.classList.add("selected");
+          button.addEventListener("click", () => {
+            attempt.responses[key] = { optionIndex };
+            saveState();
+            renderFinalQuiz();
+          });
+          block.appendChild(button);
+        });
+      }
+      els.finalBody.appendChild(block);
+    });
+  }
+}
+
+async function submitFinalQuiz(button) {
+  const attempt = state.finalAttempt;
+  const all = [...attempt.base, ...attempt.personalised];
+  button.disabled = true;
+  button.textContent = "Đang chấm…";
+
+  for (const question of all) {
+    const key = finalKey(question);
+    const response = attempt.responses[key];
+
+    if (question.type === "short_answer") {
+      const value = response?.text?.trim();
+      if (!value) {
+        attempt.responses[key] = { text: "", isCorrect: false, feedback: "Chưa trả lời." };
+        continue;
+      }
+      try {
+        const data = await postJson("/api/tutor/grade", {
+          prompt: question.prompt,
+          referenceAnswer: question.referenceAnswer || "",
+          learnerAnswer: value,
+          pageNumber: question.pageNumber,
+        });
+        attempt.responses[key] = { text: value, isCorrect: data.isCorrect, feedback: data.feedback };
+      } catch (error) {
+        attempt.responses[key] = { text: value, isCorrect: false, feedback: `Chưa chấm được (${error.message}).` };
+      }
+    } else {
+      const isCorrect = response?.optionIndex === question.correctOptionIndex;
+      attempt.responses[key] = { ...(response || {}), isCorrect };
+    }
+  }
+
+  attempt.submittedAt = new Date().toISOString();
+  const correct = all.filter((question) => attempt.responses[finalKey(question)]?.isCorrect).length;
+  saveState();
+  renderFinalQuiz();
+  renderChat();
+  trackEvent("final_quiz_submitted", { total: all.length, correct, score: Math.round((correct / all.length) * 100) });
+}
+
+function renderFinalScore(attempt, all) {
+  const container = document.createElement("div");
+  const correct = all.filter((question) => attempt.responses[finalKey(question)]?.isCorrect).length;
+
+  const score = document.createElement("div");
+  score.className = "final-score";
+  score.innerHTML = `<strong>${correct} / ${all.length}</strong> câu đúng · Phần A ${attempt.base.length} câu · Phần B ${attempt.personalised.length} câu cá nhân hoá`;
+  container.appendChild(score);
+
+  const heading = document.createElement("p");
+  heading.className = "final-section-title";
+  heading.textContent = "Nội dung nên xem lại";
+  container.appendChild(heading);
+
+  const wrong = all.filter((question) => !attempt.responses[finalKey(question)]?.isCorrect);
+  if (wrong.length === 0) {
+    container.appendChild(hint("Bạn trả lời đúng tất cả. Không có nội dung cần xem lại."));
+  } else {
+    const list = document.createElement("ul");
+    list.className = "review-list";
+    wrong.forEach((question) => {
+      const item = document.createElement("li");
+      const response = attempt.responses[finalKey(question)];
+      const page = question.pageNumber ? ` (trang ${question.pageNumber})` : "";
+      item.textContent = `${question.prompt}${page} — ${question.explanation}${response?.feedback ? ` ${response.feedback}` : ""}`;
+      list.appendChild(item);
+    });
+    container.appendChild(list);
+  }
+
+  const again = document.createElement("button");
+  again.className = "final-btn";
+  again.type = "button";
+  again.style.margin = "0";
+  again.textContent = "Làm lại với danh sách câu hỏi mới";
+  again.addEventListener("click", () => {
+    state.finalAttempt = null;
+    saveState();
+    openFinalQuiz();
+  });
+  container.appendChild(again);
+
+  return container;
+}
+
+function finalKey(question) {
+  return `${question.section}:${question.id}`;
+}
+
+/* ── Summary + persistence ───────────────────────────────── */
+
+function renderSummary() {
+  const answered = allAnsweredQuestions();
+  const correct = answered.filter((question) => question.isCorrect).length;
+
+  els.statQuestions.textContent = String(state.messages.filter((message) => message.role === "user").length);
+  els.statQuizzes.textContent = String(state.quizzes.filter((quiz) => !quiz.pending && !quiz.failed).length);
+  els.statAccuracy.textContent = `${correct} / ${answered.length}`;
+  els.statIncluded.textContent = String(buildPersonalisedSet().length);
+}
+
+function allAnsweredQuestions() {
+  return state.quizzes.flatMap((quiz) => (quiz.questions || []).filter((question) => question.answeredAt));
+}
+
+function resetSession() {
+  state = { sessionId: crypto.randomUUID(), messages: [], quizzes: [], finalAttempt: null };
+  selection = null;
+  els.finalOverlay.hidden = true;
+  saveState();
+  renderSelection();
+  renderChat();
+  renderSummary();
+  trackEvent("session_reset", {});
+}
+
+function loadState() {
+  const fallback = { sessionId: crypto.randomUUID(), messages: [], quizzes: [], finalAttempt: null };
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (!stored || typeof stored !== "object") return fallback;
+    return {
+      sessionId: stored.sessionId || fallback.sessionId,
+      messages: Array.isArray(stored.messages) ? stored.messages.filter((message) => !message.pending) : [],
+      quizzes: Array.isArray(stored.quizzes) ? stored.quizzes.filter((quiz) => !quiz.pending) : [],
+      finalAttempt: stored.finalAttempt || null,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* storage full or blocked — the session still works in memory */
+  }
+}
+
+// Fire-and-forget: analytics must never block or break the learner flow.
+function trackEvent(type, payload) {
+  const event = { type, sessionId: state.sessionId, at: new Date().toISOString(), ...payload };
+  fetch("/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events: [event] }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+
+async function postJson(url, body) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  return data;
+}
+
+function similarity(a, b) {
+  const left = tokens(a);
+  const right = tokens(b);
+  if (left.size === 0 || right.size === 0) return 0;
+  let shared = 0;
+  for (const token of left) if (right.has(token)) shared += 1;
+  return shared / Math.min(left.size, right.size);
+}
+
+function tokens(value) {
+  return new Set(
+    String(value)
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((token) => token.length > 2)
+  );
+}
+
+function hint(text) {
+  const paragraph = document.createElement("p");
+  paragraph.className = "hint";
+  paragraph.textContent = text;
+  return paragraph;
+}
+
+function label(text) {
+  const span = document.createElement("span");
+  span.textContent = text;
+  return span;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+}

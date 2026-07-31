@@ -74,6 +74,19 @@ function bindEvents() {
   els.refreshBtn.addEventListener("click", () => loadOverview(els.lessonSelect.value));
   els.autoRefreshToggle?.addEventListener("change", startAutoRefresh);
   document.addEventListener("visibilitychange", refreshOnVisible);
+  const toggle = document.querySelector("#toggleAdminSidebarBtn");
+  const apply = (collapsed) => {
+    document.body.classList.toggle("admin-sidebar-collapsed", collapsed);
+    toggle.textContent = collapsed ? "›" : "‹";
+    toggle.title = `${collapsed ? "Mở lại" : "Thu gọn"} bảng bên trái`;
+    toggle.setAttribute("aria-label", toggle.title);
+  };
+  apply(localStorage.getItem("vlearn-admin-sidebar") === "collapsed");
+  toggle?.addEventListener("click", () => {
+    const collapsed = !document.body.classList.contains("admin-sidebar-collapsed");
+    localStorage.setItem("vlearn-admin-sidebar", collapsed ? "collapsed" : "open");
+    apply(collapsed);
+  });
   els.lessonSelect.addEventListener("change", () => {
     localStorage.setItem("vlearn-admin-lesson", els.lessonSelect.value);
     loadOverview(els.lessonSelect.value);

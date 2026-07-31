@@ -36,6 +36,8 @@ const els = {
   modeTextBtn: document.querySelector("#modeTextBtn"),
   modeImageBtn: document.querySelector("#modeImageBtn"),
   toolHint: document.querySelector("#toolHint"),
+  toggleSidebarBtn: document.querySelector("#toggleSidebarBtn"),
+  toggleTutorBtn: document.querySelector("#toggleTutorBtn"),
   resetSessionBtn: document.querySelector("#resetSessionBtn"),
   finalQuizBtn: document.querySelector("#finalQuizBtn"),
   finalOverlay: document.querySelector("#finalOverlay"),
@@ -179,8 +181,53 @@ function bindEvents() {
   els.finalQuizBtn.addEventListener("click", openFinalQuiz);
   els.closeFinalBtn.addEventListener("click", () => (els.finalOverlay.hidden = true));
   els.viewer.addEventListener("pointerup", captureTextSelection);
+  els.toggleSidebarBtn?.addEventListener("click", () => togglePanel("sidebar"));
+  els.toggleTutorBtn?.addEventListener("click", () => togglePanel("tutor"));
+  restorePanelState();
   els.modeTextBtn?.addEventListener("click", () => setSelectMode("text"));
   els.modeImageBtn?.addEventListener("click", () => setSelectMode("image"));
+}
+
+// Thu gọn panel trái (danh sách bài) hoặc phải (AI tutor). Nhớ lựa chọn qua
+// localStorage vì đây là thói quen đọc của từng người, không phải trạng thái phiên.
+const PANEL_KEY = "vlearn-panels-v1";
+
+function togglePanel(which) {
+  const cls = which === "sidebar" ? "sidebar-collapsed" : "tutor-collapsed";
+  const collapsed = document.body.classList.toggle(cls);
+  paintPanelToggle(which, collapsed);
+  const saved = readPanelState();
+  saved[which] = collapsed;
+  localStorage.setItem(PANEL_KEY, JSON.stringify(saved));
+}
+
+function restorePanelState() {
+  const saved = readPanelState();
+  for (const which of ["sidebar", "tutor"]) {
+    const collapsed = Boolean(saved[which]);
+    document.body.classList.toggle(which === "sidebar" ? "sidebar-collapsed" : "tutor-collapsed", collapsed);
+    paintPanelToggle(which, collapsed);
+  }
+}
+
+function paintPanelToggle(which, collapsed) {
+  const btn = which === "sidebar" ? els.toggleSidebarBtn : els.toggleTutorBtn;
+  if (!btn) return;
+  // Mũi tên luôn chỉ về hướng mà cú bấm sẽ đưa panel tới.
+  const open = which === "sidebar" ? "‹" : "›";
+  const shut = which === "sidebar" ? "›" : "‹";
+  btn.textContent = collapsed ? shut : open;
+  const label = which === "sidebar" ? "danh sách bài giảng" : "AI Tutor";
+  btn.title = `${collapsed ? "Mở lại" : "Thu gọn"} ${label}`;
+  btn.setAttribute("aria-label", btn.title);
+}
+
+function readPanelState() {
+  try {
+    return JSON.parse(localStorage.getItem(PANEL_KEY) || "{}");
+  } catch {
+    return {};
+  }
 }
 
 function setSelectMode(mode) {

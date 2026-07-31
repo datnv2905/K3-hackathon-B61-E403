@@ -4,20 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VLearn · AI Tutor theo ngữ cảnh slide</title>
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/png" href="/assets/vlearn-logo.png" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">V</div>
+        <img class="brand-mark" src="/assets/vlearn-logo.png" alt="" />
         <div class="brand-text">
           <strong>VLearn</strong>
           <span>AI Tutor</span>
         </div>
       </div>
 
-      <a class="ghost-btn" href="/admin.html">Admin Dashboard</a>
 
       <nav class="lesson-list" id="lessonList" aria-label="Bài học">
         <button class="lesson-item is-active" type="button" disabled>
@@ -63,6 +62,10 @@
       </header>
 
       <section class="workspace">
+        <button class="panel-toggle" id="toggleSidebarBtn" type="button"
+                aria-label="Thu gọn danh sách bài giảng" title="Thu gọn danh sách bài giảng">‹</button>
+        <button class="panel-toggle" id="toggleTutorBtn" type="button"
+                aria-label="Thu gọn AI Tutor" title="Thu gọn AI Tutor">›</button>
         <section class="viewer" id="viewer" aria-label="Nội dung bài giảng"></section>
 
         <aside class="tutor" aria-label="AI tutor">

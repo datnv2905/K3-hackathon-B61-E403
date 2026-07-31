@@ -218,11 +218,7 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 | G13–G20 | Thường | Chatlog thật (6) + tự sinh (2) | Các câu hỏi deadline/link rõ ràng, đủ thông tin, có nguồn xác định | Trả lời đúng, ngắn gọn, kèm trích dẫn |
 | G21–G23 | Hiếm | Tự sinh | Hỏi bằng tiếng Anh xen tiếng Việt; hỏi dồn 2 câu hỏi (deadline + link) trong 1 tin; spam emoji không kèm câu hỏi rõ | Nhận diện đúng ý định thật, hoặc hỏi lại nếu không chắc |
 
-*(Bảng rút gọn để minh hoạ — nhóm liệt kê đủ 20+ dòng cụ thể trong file `eval/golden-set.csv`, không rút gọn dạng "G13–G20".)*
-
 ### Quality bar
-
-*(chốt tại spec.md commit 23:59 N1, giữ nguyên sau đó)*
 
 > **Đạt khi:**
 > - Chiều **Đúng-có-căn-cứ** ≥ **95%** qua bộ, và **0 case** thuộc lớp ① bị fail (sai/bịa deadline-link không chấp nhận được dù chỉ 1 case).
@@ -244,18 +240,10 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 ---
 
-### Cách nhóm áp dụng cho lát cắt của mình
-
-1. Thay 4 chiều chất lượng bằng chiều phù hợp lát cắt của nhóm — nhưng **luôn giữ nguyên yêu cầu**: mỗi chiều phải có định nghĩa mà 2 người ngoài nhóm chấm ra cùng kết quả.
-2. Golden set phải đủ 20+ case, đúng cơ cấu (≥2/lớp × 4 lớp, 8–10 thường, 2–4 hiếm, ≥10 từ chatlog thật) — lưu file thật trong `eval/`, không chỉ mô tả trong spec.
-3. Quality bar chốt bằng **số cụ thể** trước 23:59 N1 và **không đổi sau đó** dù kết quả thấp.
-4. Bảng kết quả phải chạy **trọn bộ mỗi lượt** (không chỉ chạy case đã sửa) và ghi cả case fail kèm nguyên nhân.
 
 # §8. Phân công & kế hoạch
 
 > Dựa trên PRD "Hệ thống Bài giảng Slide + AI Hỗ trợ Học tập". Lát cắt trung tâm coi là: *người học khoanh vùng/highlight nội dung slide → hỏi chatbot → nhận giải thích có trích dẫn (số slide + đoạn trích)* (FR-01 → FR-06, AC-01, AC-02) — đây là quyết định AI lõi cần đo kỹ nhất; micro quiz, dashboard, smart suggestion và diagram regeneration là các nhánh mở rộng dùng chung nền tảng đó.
->
-> Tên trong bảng dưới là **placeholder theo vai trò** — nhóm thay bằng tên thật, giữ nguyên cấu trúc cột.
 
 ## Phân công có tên
 
@@ -263,9 +251,9 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 |---|---|---|---|
 | **Spec & Evidence** | Trần Nguyễn Thế Nhật, Nguyễn Trọng Toàn | Viết spec.md §1-§3, tổng hợp JTBD, dẫn evidence pain của người học (không hiểu đoạn/diagram cụ thể, quiz cuối không phản ánh chỗ yếu cá nhân — mục 2.1 PRD) và của giảng viên (không biết vùng nào gây khó hiểu — mục 2.2) | `spec.md`, `evidence/` |
 | **Prompt & AI logic** | Nguyễn Kim Trung Đức | Thiết kế prompt cho 2 quyết định AI trung tâm: (1) trả lời có trích dẫn từ context khoanh/highlight (FR-05, FR-06, AC-01/02), (2) sinh micro quiz 1-3 câu bám ngữ cảnh (FR-08, FR-09); viết golden set §7 | `prompts/`, `eval/golden-set.csv` |
-| **Code — Frontend** | Nguyễn Văn Đạt  | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
+| **Code — Frontend** | Nguyễn Văn Đạt, Hoàng Nguyễn Phong  | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
 | **Code — Backend/AI call** | Hoàng Nguyễn Phong | Chunk theo slide + lưu metadata số slide (rủi ro 20.3), gọi AI thật cho câu trả lời + micro quiz, tracking tương tác (FR-19, FR-20) | `codebase/backend/` |
-| **Demo & Validation** | Lê Hồng Đức | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
+| **Demo & Validation** | Lê Hồng Đức, Hoàng Nguyễn Phong | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
 
 ## Willing users (≥3 tên) + kế hoạch vòng validation CP5
 
@@ -279,14 +267,12 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 **Kế hoạch phiên validation (10 phút/người, theo guide §4.2):**
 
-1. Giao task thật: *"Hãy dùng slide này, khoanh một đoạn bạn thấy khó hiểu và hỏi trợ lý"* (với user 1, 2) hoặc *"Hãy xem dashboard và thử duyệt một đề xuất diagram mới"* (với user 3) → quan sát im lặng, không gợi ý.
+1. Giao task thật: *"Hãy dùng slide này, khoanh một đoạn bạn thấy khó hiểu và hỏi trợ lý"*  hoặc *"Hãy xem dashboard và thử duyệt một đề xuất diagram mới"* → quan sát im lặng, không gợi ý.
 2. Hỏi đúng 3 câu:
    - *"Điều gì khó hiểu hoặc khó chịu nhất?"*
    - *"Câu trả lời/nguồn trích dẫn này bạn có tin không — vì sao?"*
    - *"Bạn có dùng thật không — vì sao / vì sao chưa?"*
 3. Log nguyên văn, không diễn giải hộ.
-
-**Người log:** *[Tên E]* — ghi vào bảng `validation/log.md` theo cột: người thử · task · quan sát · quote nguyên văn · mức nghiêm trọng. Tổng hợp 1-2 thay đổi làm trước demo → đưa vào Changelog §9.
 
 ## Multi-prototype: trục khác biệt của ≥2 phương án + lý do chọn
 
@@ -310,4 +296,3 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 | CP3 | AI thật + có test + test thật | Test nhanh để biết nhóm còn thiếu gì |
 | CP4 | Cải tiến dữ liệu thật | Có thể dùng thật với nhu cầu thật |
 | CP5 | Tìm 3 user thật + nhận feedback | Có feedback thực tế và cải tiến theo |
-| CP6 | - | - |

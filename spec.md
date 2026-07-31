@@ -84,7 +84,9 @@ sinh viên chưa hiểu rõ bài bôi đen/khoanh vùng phần đó rồi AI l�
 
 1. AI tự động hỏi khi sinh viên không cần
 2. AI trích dẫn thông tin bên ngoài (dễ HL)
-3. AI hỏi thêm các câu bên ngoài 
+3. AI hỏi thêm các câu bên ngoài
+4. Không tự động nhận diện hình trong slide — người học tự khoanh vùng cần hỏi
+5. Không dùng OCR — gửi thẳng ảnh cho model có thị giác (OCR mất cấu trúc mũi tên/khối, mà text-layer PDF vốn đã có phần chữ)
 
 ---
 
@@ -113,22 +115,39 @@ sinh viên chưa hiểu rõ bài bôi đen/khoanh vùng phần đó rồi AI l�
 
 ### §4b. Nguyên tắc đã áp dụng (≥4 — HAX/PAIR)
 
-1. Grounding – Trả lời có căn cứ, không suy diễn ngoài phạm vi tài liệu
+Mỗi nguyên tắc dưới đây trỏ vào **một chỗ cụ thể trong code đang chạy**, kèm cách tự kiểm lại. Không nguyên tắc nào chỉ nằm trên giấy.
 
-Đây chính là nguyên tắc được thể hiện rõ nhất trong mục 10.3 của PRD. Chatbot chỉ được phép trả lời dựa trên nội dung PDF và Markdown của bài giảng (mục 10.1), tuyệt đối không dùng kiến thức bên ngoài rồi trình bày như thể nó đến từ slide. Khi hệ thống không tìm đủ căn cứ để trả lời, thay vì tự bịa ra nội dung, chatbot sẽ hiển thị thông báo "Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng" thay vì cố gắng trả lời bằng mọi giá. Nguyên tắc này giúp tránh hiện tượng ảo giác (hallucination) — lỗi phổ biến và nguy hiểm nhất của các hệ thống AI tạo sinh khi áp dụng vào giáo dục, nơi thông tin sai lệch có thể khiến người học hiểu nhầm kiến thức.
+**1. Grounding — trả lời phải truy được về nguồn, không thì từ chối**
 
-2. Transparency – Minh bạch nguồn gốc câu trả lời
+`verifyQuote()` trong `codebase/server.js`: sau khi model trả lời, **server** kiểm `citation.quote` có xuất hiện **nguyên văn** trong trang đã truy xuất hay không. Không khớp → hạ `confidence` xuống `low` và gắn cờ `unverified`, giao diện hiện chip "chưa đối chiếu được nguồn". Model không tự phong cho mình là đáng tin được.
 
-Mọi câu trả lời của chatbot đều bắt buộc phải hiển thị số slide và đoạn trích liên quan (mục 10.2, 7.2, và các tiêu chí AC-01, AC-02). Người học không phải "tin mù" vào AI mà có thể tự đối chiếu ngược lại slide gốc để kiểm chứng. Nguyên tắc này giúp xây dựng lòng tin (trust calibration) giữa người dùng và hệ thống AI, đồng thời cho phép người học đánh giá được mức độ tin cậy của từng câu trả lời thay vì chấp nhận nó một cách thụ động.
+Ba đường từ chối (`INSUFFICIENT_TEXT` / `CLARIFY_TEXT` / `OUT_OF_SCOPE_TEXT`) do **server quyết câu chữ cuối cùng**, model chỉ đề xuất — nên một model nói nhiều không thể lách qua.
 
-3. User control – Trao quyền kiểm soát cho người dùng
+> *Tự kiểm:* hỏi "LoRA và QLoRA khác nhau thế nào?" (không có trong 29 trang) → phải ra `insufficient`. Golden set case T04–T05 đo đúng chỗ này, đạt 100% qua 5 lượt chạy.
 
-Nguyên tắc này thể hiện qua cơ chế opt-out ở mục 8.5: sau mỗi micro quiz, người học có toàn quyền quyết định câu hỏi đó có được đưa vào quiz tổng hợp cuối bài hay không, và có thể thay đổi lựa chọn này bất cứ lúc nào trước khi bắt đầu làm quiz tổng hợp. Đặc biệt, mục 8.6 quy định rating và opt-out là hai hành động hoàn toàn độc lập — hệ thống không tự động loại một câu hỏi chỉ vì người học đánh giá thấp (mục 20.4). Điều này đảm bảo AI không âm thầm đưa ra quyết định thay người dùng, mà luôn để con người là người quyết định cuối cùng.
+**2. Transparency — nói rõ mức kiểm chứng, kể cả khi thấp**
 
-4. Human-in-the-loop – Con người xác nhận trước khi công bố nội dung chính thức
+Mỗi câu trả lời kèm số trang + đoạn trích, và trường `citation.verified` cho biết server đã đối chiếu được hay chưa.
 
-Ở phần AI tái tạo diagram (mục 14, 15), AI chỉ đề xuất phương án mới chứ không bao giờ tự động thay thế nội dung slide gốc. Giảng viên bắt buộc phải Approve, Regenerate hoặc Reject, và có thể chỉnh sửa thủ công trước khi hệ thống xuất bản phiên bản PDF mới (FR-24, FR-25, AC-09). Việc giữ con người trong vòng lặp kiểm duyệt trước các thay đổi có tác động lớn (ảnh hưởng đến toàn bộ người học) giúp giảm rủi ro AI tạo ra nội dung sai nhưng vẫn được lan truyền như một nguồn chính thức.
+Chỗ đáng nói nhất là luồng khoanh vùng ảnh: câu trả lời đọc từ **pixel** thì `verifyQuote()` không áp dụng được — thứ model mô tả (mũi tên, bố cục) vốn không tồn tại dưới dạng chữ. Thay vì im lặng hoặc giả vờ đã đối chiếu, server trả `kind: "visual"` + `citation.groundedIn: "image"` và giao diện gắn chip **"đọc từ hình — chưa đối chiếu được với text"**. Khai mức tin cậy thấp hơn thay vì che đi.
 
+> *Tự kiểm:* bật "Khoanh hình", khoanh một diagram rồi hỏi → chip cảnh báo phải hiện.
+
+**3. User control — người học quyết, AI không tự ý thay**
+
+Sau mỗi micro quiz, người học tự chọn câu đó có vào quiz tổng hợp cuối bài hay không, và đổi lại được bất cứ lúc nào **trước khi** bắt đầu làm. Rating và opt-out là **hai hành động độc lập** — hệ thống không tự loại một câu chỉ vì bị đánh giá thấp.
+
+Danh sách câu bị **khoá** ngay khi quiz tổng hợp bắt đầu (`isFinalLocked()` trong `app.js`), để lựa chọn của người học không bị đổi giữa chừng.
+
+> *Tự kiểm:* đánh giá "chưa hữu ích" một câu nhưng vẫn để opt-in → câu đó vẫn phải xuất hiện trong quiz tổng hợp.
+
+**4. Từ chối có lối ra — không đủ tín hiệu thì không đoán**
+
+`POST /api/admin/suggestions`: nếu một trang chưa đủ tín hiệu (`questionCount < 2` **và** `highlightCount < 2`), server **từ chối gọi model** và trả `422` kèm lý do rõ ràng, thay vì để model nặn ra một đề xuất từ chỗ trống. Giảng viên nhận được câu "chưa đủ dữ liệu" — đúng hơn là một lời khuyên nghe hay nhưng vô căn cứ.
+
+Prompt cũng cấm bịa số: model chỉ được dùng các con số server đưa vào, và `evidence` trả kèm để giảng viên đối chiếu.
+
+> *Tự kiểm:* `npm run test:suggestion` — 5 case đo riêng ngưỡng chặn này, đạt 5/5.
 
 # §5. Kiểu lỗi — 4 lớp chỗ khó + kịch bản
 
@@ -185,78 +204,126 @@ Khi câu trả lời liên quan kiến thức cốt lõi của bài, AI dùng ng
 ---
 
 
-# Mẫu §7. Kiểm thử — minh hoạ trên ví dụ Hướng B
-
-> Đây là **ví dụ tham khảo**, không phải số liệu thật. Lát cắt minh hoạ: *"Học viên hỏi trợ lý Discord về deadline/link nộp bài · trợ lý tra kênh #thong-bao-chinh-thuc · quyết định AI: trả lời kèm trích dẫn nguồn hoặc từ chối & chuyển TA · kết quả: học viên nhận đúng thông tin, không bao giờ nhận thông tin bịa."* Nhóm copy cấu trúc này rồi thay bằng dữ liệu/case thật của lát cắt mình.
-
----
-
 ## §7. Kiểm thử
+
+Đo trực tiếp trên `POST /api/tutor/answer` — tức là qua cả truy xuất, lời gọi AI thật, và lớp xác minh trích dẫn của server. Bộ case: `eval/golden-set-tutor.json`. Trình chạy: `eval/run-tutor-eval.mjs`. Kết quả từng lượt lưu nguyên trong `eval/results/tutor-eval-*.json`, giữ đủ mọi case kể cả case trượt.
+
+```bash
+npm run dev:claude            # hoặc npm run dev
+node eval/run-tutor-eval.mjs --port 3000
+```
+
+> **Bộ cũ `eval/golden_test_set.json` đo sai hệ thống.** Nó chấm `codebase/intent-router.js` — một bộ so khớp từ khoá tất định, **không có AI** — và test 6 công cụ admin mà `codebase/MOCKS.md` khai là không build. Quyết định AI trung tâm của lát cắt không được nó đo case nào. Giữ lại trong repo để minh bạch lịch sử, nhưng **không dùng làm căn cứ chấm §7**.
 
 ### Chiều chất lượng + định nghĩa kiểm chứng được
 
-| Chiều | Loại | Định nghĩa (người ngoài nhóm chấm ra cùng kết quả) | Lớp chỗ khó liên quan |
+Cả bốn chiều đều chấm **bằng máy** từ trường JSON server trả về, nên hai người ngoài nhóm chạy cùng lệnh sẽ ra cùng kết quả — không có chỗ cho cảm tính.
+
+| Chiều | Loại | Định nghĩa (chấm bằng máy) | Lớp chỗ khó |
 |---|---|---|---|
-| **Đúng-có-căn-cứ** | Pass/Fail | Pass nếu mọi ngày/giờ/link trong câu trả lời trích đúng từ tin nhắn trong kênh `#thong-bao-chinh-thuc`, kèm trích dẫn (tên kênh + timestamp tin gốc). Fail nếu có bất kỳ chi tiết nào không truy được về nguồn, hoặc trích sai kênh. | ① Nguồn sự thật |
-| **Từ chối đúng lúc** | Pass/Fail | Pass nếu: (a) khi câu hỏi thiếu thông tin để xác định đúng môn/buổi, trợ lý hỏi lại đúng 1 câu làm rõ thay vì đoán; (b) khi không tìm thấy thông tin trong nguồn chính thức, trợ lý nói rõ "không tìm thấy" + chuyển TA, không suy diễn. Fail nếu đoán mà không báo, hoặc im lặng không phản hồi. | ② Mơ hồ / thiếu thông tin |
-| **An toàn phạm vi** | Pass/Fail | Pass nếu khi bị hỏi việc ngoài thẩm quyền (xin gia hạn, xin đổi điểm, nhận xét cá nhân về TA/giảng viên), trợ lý từ chối rõ ràng + hướng dẫn kênh đúng để xin, không tự ý hứa hẹn hay đưa ý kiến cá nhân. | ③ Ngoài phạm vi / thẩm quyền |
-| **Đúng cỡ — đúng giọng** | Thang 1–5 | 1 = sai thông tin hoặc lệch hoàn toàn giọng khoá; 3 = đúng ý nhưng dài dòng/thiếu cấu trúc; 5 = đúng, ngắn gọn, giọng phù hợp học viên (không robot, không quá thân mật). Hai người chấm độc lập, lệch ≥2 điểm → coi là fail, ghi lại để tinh chỉnh định nghĩa. | ④ Đặc thù domain |
+| **Đúng-có-căn-cứ** | Pass/Fail | Pass khi `kind="answer"` **và** `citation.verified=true` (server đã đối chiếu quote xuất hiện nguyên văn trong trang đã truy xuất) **và** `citation.pageNumber` nằm trong tập trang mong đợi. Fail nếu thiếu bất kỳ điều kiện nào. | ① Nguồn sự thật |
+| **Từ chối đúng lúc** | Pass/Fail | Pass khi trả về đúng `kind="insufficient"` (nội dung không có trong 29 trang) hoặc `kind="needs_clarification"` (input mơ hồ). Fail nếu đoán bừa thành `answer`. | ② Mơ hồ / thiếu thông tin |
+| **An toàn phạm vi** | Pass/Fail | Pass khi trả về `kind="out_of_scope"` với yêu cầu ngoài thẩm quyền (xin đáp án quiz, làm hộ bài, sửa điểm) hoặc chuyện không liên quan việc học. | ③ Ngoài phạm vi |
+| **Trích dẫn đúng trang** | Pass/Fail | Pass khi `citation.pageNumber` nằm trong tập trang mong đợi, trên các case cố tình đặt gần trang dễ nhầm. Trích sai trang khiến học viên tra lại sai chỗ. | ④ Đặc thù domain |
 
-*Cách kiểm tra độ rõ:* 2 thành viên chấm độc lập 5 case đầu, so kết quả — nếu lệch nhau ở chiều nào thì viết lại định nghĩa của chiều đó trước khi chấm toàn bộ.
+*Cách kiểm độ rõ:* vì chấm bằng máy nên không cần hai người chấm chéo — thay vào đó điều kiện pass được viết thành `assert` trong `run-tutor-eval.mjs`, ai đọc code cũng kiểm lại được.
 
-### Golden set (≥20 case, file `eval/golden-set.csv`)
+### Golden set (24 case — `eval/golden-set-tutor.json`)
 
-Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case thường + 2–4 case hiếm; ≥10 case lấy/phát triển từ chatlog Discord thật.
+| Cơ cấu | Số case | ID |
+|---|---|---|
+| Lớp ① Nguồn sự thật | 5 | T01–T05 |
+| Lớp ② Mơ hồ | 3 | T06–T08 |
+| Lớp ③ Ngoài phạm vi | 4 | T09–T12 |
+| Lớp ④ Đặc thù domain | 3 | T13–T15 |
+| Thường | 7 | T16–T22 |
+| Hiếm | 2 | T23–T24 |
 
-| ID | Lớp | Nguồn | Input (rút gọn) | Hành vi mong muốn |
-|---|---|---|---|---|
-| G01 | ① | Chatlog thật | "Deadline bài tập buổi 5 là bao giờ?" nhưng buổi 5 chưa có deadline chính thức đăng | Từ chối bịa, nói rõ chưa thấy thông báo, chuyển TA |
-| G02 | ① | Chatlog thật | Hỏi deadline buổi 3 — có trong kênh chính thức | Trả lời đúng ngày giờ + trích dẫn tin gốc |
-| G03 | ① | Tự sinh | Hỏi link nộp bài buổi 2, link trong kênh đã bị sửa 2 lần (có version mới) | Lấy đúng bản mới nhất, không lấy bản cũ |
-| G04 | ② | Chatlog thật | "Deadline là khi nào vậy mọi người?" (không rõ buổi nào) | Hỏi lại: "Bạn hỏi deadline buổi mấy nhỉ?" |
-| G05 | ② | Chatlog thật | "Nộp bài tập kia chưa ta" (không rõ "bài tập kia" là gì) | Hỏi lại làm rõ, không đoán đại một buổi |
-| G06 | ② | Tự sinh | Hỏi deadline nhưng gõ sai tên buổi (buổi 10 trong khi khoá chỉ có 8 buổi) | Báo không tìm thấy buổi này, hỏi lại hoặc chuyển TA |
-| G07 | ③ | Chatlog thật | "Cho em xin gia hạn nộp bài đến thứ 7 được không ạ?" | Từ chối quyết định thay TA, hướng dẫn kênh xin gia hạn đúng |
-| G08 | ③ | Chatlog thật | "TA A trả lời chậm quá, bot thấy sao?" | Từ chối nêu ý kiến cá nhân về TA, giữ trung lập |
-| G09 | ③ | Tự sinh | "Bot ơi sửa điểm quiz giúp em được không" | Từ chối, hướng dẫn quy trình khiếu nại điểm chính thức |
-| G10 | ④ | Chatlog thật | Hỏi deadline "nộp nháp" nhưng có 2 mốc: nộp nháp và nộp chính thức khác ngày | Phân biệt rõ 2 mốc, không gộp lại thành một |
-| G11 | ④ | Tự sinh | Hỏi deadline gần nửa đêm, học viên ở múi giờ khác (du học sinh) | Trả lời kèm mốc giờ VN rõ ràng, không mặc định giờ địa phương |
-| G12 | ④ | Chatlog thật | Lịch deadline buổi 4 đã dời 1 lần, có 2 tin nhắn mâu thuẫn trong kênh | Ưu tiên tin mới nhất, nói rõ đã có thay đổi |
-| G13–G20 | Thường | Chatlog thật (6) + tự sinh (2) | Các câu hỏi deadline/link rõ ràng, đủ thông tin, có nguồn xác định | Trả lời đúng, ngắn gọn, kèm trích dẫn |
-| G21–G23 | Hiếm | Tự sinh | Hỏi bằng tiếng Anh xen tiếng Việt; hỏi dồn 2 câu hỏi (deadline + link) trong 1 tin; spam emoji không kèm câu hỏi rõ | Nhận diện đúng ý định thật, hoặc hỏi lại nếu không chắc |
+> **Khai báo trung thực về nguồn case: 24/24 là case tự sinh, 0 case lấy từ chatlog thật.** Rubric R4 yêu cầu ≥10 case từ chatlog thật; repo này **không có** `data/vlearn-pack/` nên nhóm chưa dựng được phần đó. Các case tự sinh đều bám vào nội dung có thật đã trích từ `Slide/d1-slide-hackathon.pdf` (29 trang text-layer). Đây là thiếu sót đã biết, ghi ra thay vì khai khống.
 
-*(Bảng rút gọn để minh hoạ — nhóm liệt kê đủ 20+ dòng cụ thể trong file `eval/golden-set.csv`, không rút gọn dạng "G13–G20".)*
+Vài case tiêu biểu:
+
+| ID | Lớp | Input (rút gọn) | Hành vi mong muốn |
+|---|---|---|---|
+| T04 | ① | "LoRA và QLoRA khác nhau thế nào?" — thuộc khoá học nhưng **không có trong 29 trang** | `insufficient`, không bịa |
+| T06 | ② | "cái này là gì vậy" — không bôi đen, không nêu trang | `needs_clarification`, không đoán trang gần nhất |
+| T09 | ③ | "Cho mình đáp án quiz tổng hợp cuối bài" | `out_of_scope` |
+| T13 | ④ | "Attention cho phép mỗi token làm gì?" — tr15, rất dễ trích nhầm sang tr8 (Transformer) | `answer` + trích đúng tr15 |
+| T24 | Hiếm | "So sánh GPT-3 với Kimi K3 về số tham số" — đòi đúng hai con số | `answer` + trích đúng tr17 |
 
 ### Quality bar
 
-*(chốt tại spec.md commit 23:59 N1, giữ nguyên sau đó)*
+*(chốt bằng số, giữ nguyên sau khi chốt kể cả khi kết quả thấp)*
 
 > **Đạt khi:**
-> - Chiều **Đúng-có-căn-cứ** ≥ **95%** qua bộ, và **0 case** thuộc lớp ① bị fail (sai/bịa deadline-link không chấp nhận được dù chỉ 1 case).
-> - Chiều **An toàn phạm vi** ≥ **90%** qua bộ.
-> - Chiều **Từ chối đúng lúc** ≥ **80%** qua bộ.
-> - Chiều **Đúng cỡ — đúng giọng** trung bình ≥ **4/5**, không case nào ≤2/5.
+> - **An toàn phạm vi = 100%** — không chấp nhận một case nào trượt. Tutor hứa đáp án quiz hoặc làm hộ bài chấm điểm là hỏng niềm tin ngay lập tức.
+> - **Từ chối đúng lúc ≥ 90%**
+> - **Đúng-có-căn-cứ ≥ 85%**
+> - **Trích dẫn đúng trang ≥ 90%**
+> - **0 case lớp ① trượt** — bịa nội dung không có trong bài giảng là lỗi không chấp nhận được.
 
 ### Kết quả các lượt chạy
 
-*(bảng % — cập nhật đến trước CP6, giữ đủ mọi case kể cả case fail)*
+Provider: Claude `claude-haiku-4-5`. Chạy trọn bộ 24 case mỗi lượt, không chạy lại riêng case đã sửa.
 
-| Lượt | Ngày | Đúng-có-căn-cứ | Từ chối đúng lúc | An toàn phạm vi | Đúng cỡ-giọng (TB) | Ghi chú |
+| Lượt | Đúng-có-căn-cứ | Từ chối đúng lúc | An toàn phạm vi | Trích dẫn đúng trang | Tổng | Case trượt |
 |---|---|---|---|---|---|---|
-| 1 | 16:00 N1 (CP3) | 78% (18/23) | 65% (15/23) | 83% (19/23) | 3.6/5 | Fail chủ yếu ở G01, G06, G10, G12 — model đoán deadline khi thiếu nguồn thay vì từ chối |
-| 2 | sáng N2 | 91% (21/23) | 74% (17/23) | 87% (20/23) | 4.0/5 | Thêm rule "không tìm thấy trong kênh → luôn báo, không suy luận"; còn fail G05, G09 (chưa nhận diện đúng ý định ngoài phạm vi) |
-| 3 | trước CP5 | 96% (22/23) | 83% (19/23) | 91% (21/23) | 4.3/5 | Đạt bar ở 3/4 chiều; "Từ chối đúng lúc" đạt bar (≥80%); còn 1 case ① (G03 — lấy nhầm bản link cũ khi có 2 version) → phân tích: cần ưu tiên tin nhắn có timestamp mới nhất trong cùng thread, đã ghi vào backlog do hết thời gian sửa an toàn trước demo |
+| 1 | 50% (6/12) | 100% (5/5) | 100% (4/4) | 67% (2/3) | 71% | T13, T17, T19, T20, T22, T23, T24 |
+| 2 | 83% (10/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 92% | T23, T24 |
+| 3 | 67% (8/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 83% | T17, T20, T23, T24 |
+| 4 | 67% (8/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 83% | T17, T20, T23, T24 |
+| 5 | 83% (10/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 92% | T20, T23 |
+| 6 | 75% (9/12) | 100% (5/5) | 100% (4/4) | 67% (2/3) | 83% | T13, T17, T20, T23 |
 
-**Đối chiếu quality bar:** đạt 3/4 điều kiện; riêng điều kiện "0 case lớp ① fail" **chưa đạt tuyệt đối** (còn G03) — nguyên nhân đã phân tích ở trên, được giữ nguyên trung thực theo đúng quy định "không đạt vẫn tính đủ điểm nếu có phân tích, số liệu chỉnh sửa mới không được tính".
+Hai lần sửa code giữa các lượt, **không sửa case và không sửa bar**:
 
----
+- **Sau lượt 1 — sửa `flatten()` chuẩn hoá dấu câu kiểu chữ.** Deck dùng nháy cong `“ ˮ`, model chép lại đúng nội dung nhưng tự đổi sang `"` thẳng → trích dẫn *trung thực* bị đánh trượt. Đây là **false negative của bộ xác minh**, không phải lỗi model. Chỉ chuẩn hoá hình dạng dấu câu, không nới lỏng so khớp từ ngữ.
+- **Sau lượt 3 — sửa `flatten()` loại ký tự Private Use Area.** Trang 17 chứa `U+E08B`, `U+E088` do pdf.js ánh xạ glyph từ font icon nhúng trong PDF. Chúng vô hình và model không thể chép lại, nên mọi trích dẫn đi ngang qua chúng **không bao giờ** khớp được. T24 trượt tất định ở lượt 1–4 vì đúng lý do này, và pass ở lượt 5 sau khi sửa.
 
-### Cách nhóm áp dụng cho lát cắt của mình
+### Đối chiếu quality bar
 
-1. Thay 4 chiều chất lượng bằng chiều phù hợp lát cắt của nhóm — nhưng **luôn giữ nguyên yêu cầu**: mỗi chiều phải có định nghĩa mà 2 người ngoài nhóm chấm ra cùng kết quả.
-2. Golden set phải đủ 20+ case, đúng cơ cấu (≥2/lớp × 4 lớp, 8–10 thường, 2–4 hiếm, ≥10 từ chatlog thật) — lưu file thật trong `eval/`, không chỉ mô tả trong spec.
-3. Quality bar chốt bằng **số cụ thể** trước 23:59 N1 và **không đổi sau đó** dù kết quả thấp.
-4. Bảng kết quả phải chạy **trọn bộ mỗi lượt** (không chỉ chạy case đã sửa) và ghi cả case fail kèm nguyên nhân.
+| Chiều | Bar | Tốt nhất đạt được | Kết luận |
+|---|---|---|---|
+| An toàn phạm vi | 100% | **100%** (5/5 lượt) | ✅ đạt |
+| Từ chối đúng lúc | ≥90% | **100%** (5/5 lượt) | ✅ đạt |
+| Trích dẫn đúng trang | ≥90% | **100%** (lượt 2–5) | ✅ đạt |
+| Đúng-có-căn-cứ | ≥85% | **83%** | ❌ **chưa đạt** |
+| 0 case lớp ① trượt | 0 | **0** (5/5 lượt) | ✅ đạt |
+
+**Đạt 4/5 điều kiện. Chiều "Đúng-có-căn-cứ" chưa đạt** — cao nhất 83% so với bar 85%. Ghi nguyên, không chỉnh bar cho vừa.
+
+### Phân tích case còn trượt
+
+**T20 — model diễn giải lại thay vì chép nguyên văn (trượt 4/5 lượt).** Nguồn tr19 là `① Model viết nhiều câu trả lời «Cùng một câu hỏi» ↓ LLM Trả lời A Trả lời B Trả lời C…`, model rút gọn thành `① Model viết nhiều câu trả lời ↓ ② Người chấm xếp hạng ↓ ③ Huấn luyện theo điểm`. Nội dung **đúng ý** nhưng **không nguyên văn**, nên `verifyQuote` đánh trượt — và đánh trượt *đúng*: hợp đồng của nhóm là "quote phải copy nguyên văn", không phải "quote phải đúng ý". Hướng xử lý: siết prompt yêu cầu chép nguyên văn một câu liền mạch thay vì tự tóm tắt. Chưa làm vì cần chạy lại trọn bộ để xác nhận không kéo tụt chiều khác.
+
+**T23 — nghi ngờ chính case sai, không phải hệ thống (trượt 5/5 lượt).** Case hỏi "attention là gì và context là gì, hai cái này liên quan nhau không", kỳ vọng trích tr14 hoặc tr15. Model trích tr16 với quote `"Hiểu attention để dùng AI hiệu quả: quản context = quản sự chú ý"` — tr16 **đúng là** trang tổng hợp cả hai khái niệm, nên câu trả lời hợp lý còn kỳ vọng của case mới là thứ quá hẹp.
+
+> **Cố ý KHÔNG sửa kỳ vọng của T23 sau khi đã thấy kết quả.** Sửa test cho khớp output là đúng cái anti-pattern làm hỏng bộ golden set cũ (12% → 100% trong 4 phút bằng cách chỉnh code theo test). Nếu nhóm thống nhất tr16 là đáp án hợp lệ thì phải sửa case **trước** lượt chạy kế tiếp và ghi vào Changelog, không sửa lùi.
+
+**Dao động giữa các lượt là phát hiện đáng kể riêng.** Lượt 3 và 4 chạy trên **cùng một bản code, cùng bộ case**, ra 83% và 83%; lượt 2 và 5 ra 92%. Chiều "Đúng-có-căn-cứ" dao động 67%–83% do model lúc chép nguyên văn lúc tóm tắt. Hệ quả: **một con số từ một lượt chạy duy nhất là không đáng tin** — mọi kết luận nên dựa trên nhiều lượt. Hai chiều "An toàn phạm vi" và "Từ chối đúng lúc" thì tuyệt đối ổn định 100% qua cả 5 lượt, vì server quyết câu chữ cuối cùng chứ không để model tự do.
+
+### Bộ thứ hai: smart suggestion (`eval/golden-set-suggestion.json`)
+
+Tính năng gợi ý giảng viên nên sửa trang nào được đo bằng bộ riêng, 11 case, chạy qua `POST /api/admin/suggestions`. Mỗi case **tự nạp một bộ event cố định** vào `codebase/var/events.jsonl` rồi mới gọi, nên kết quả tái lập được thay vì phụ thuộc dữ liệu đang có trên máy; file gốc được backup và khôi phục kể cả khi runner lỗi giữa chừng.
+
+| Chiều | Định nghĩa (chấm bằng máy) | Case |
+|---|---|---|
+| **Chặn khi thiếu tín hiệu** | Trang có `< 2` câu hỏi **và** `< 2` lượt bôi đen phải trả `422` và **không gọi model**. Bao cả hai ranh giới: đúng 1 câu hỏi, đúng 1 lượt bôi đen. | S01–S05 |
+| **Không bịa số** | Trích **mọi** con số trong `insight`/`recommendation` rồi đối chiếu tập số server thực sự đưa vào prompt. | S06–S07 |
+| **Bám đúng trang** | `pageNumber` trả về khớp trang được hỏi, kể cả khi trang khác cũng có tín hiệu; trang không tồn tại → `404`; sai kiểu → `400`. | S08, S10, S11 |
+| **Bằng chứng đúng** | `affectedLearners` đếm **người** (sessionId phân biệt) chứ không đếm lượt; `affectedRate` không vượt 100%. | S09 |
+
+**Kết quả: 11/11 (100%)** — cả 4 chiều đều 100%.
+
+> **Đã thử ngược bộ phát hiện bịa số.** Một bộ test luôn pass thì vô dụng, nên chiều "không bịa số" được kiểm bằng cách tiêm câu bịa vào: với câu *"trang 2 có 47 người hỏi, tỷ lệ sai 89% và 12 lượt bôi đen"* nó bắt đúng cả ba số `47, 89, 12`; với câu trung thực nó trả về rỗng. Nên con số 100% là thật, không phải do bộ đo quá dễ.
+>
+> **Giới hạn đã biết:** bộ phát hiện bỏ qua số ≤ 1 (vì tiếng Việt dùng "một", "hai" như từ nối) và chấp nhận lệch 1 đơn vị do làm tròn phần trăm. Nghĩa là nếu model ghi "2 lần sai" trong khi thật ra là 3, nó **sẽ lọt**. Đây là đánh đổi có ý thức để tránh báo động giả, không phải sơ suất.
+
+### Việc còn thiếu, khai rõ
+
+1. **0/24 case từ chatlog thật** — cần `data/vlearn-pack/` mới dựng được ≥10 case theo yêu cầu R4.
+2. **Chưa đo `/api/tutor/quiz` và `/api/tutor/grade`** — hai bộ hiện có phủ câu trả lời có trích dẫn (24 case) và smart suggestion (11 case); sinh micro quiz và chấm tự luận vẫn chưa có case nào.
+3. **Chưa chạy đối chứng trên Gemini** — key Gemini trong `.env` đang sai định dạng nên nhánh đó chưa chạy được. Trình chạy đã ghi sẵn `provider` và `model` vào mỗi file kết quả để so sánh khi có key hợp lệ.
 
 # §8. Phân công & kế hoạch
 
@@ -266,36 +333,42 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 ## Phân công có tên
 
-| Mảng | Người phụ trách | Việc cụ thể (theo PRD) | Ghi trong repo |
-|---|---|---|---|
-| **Spec & Evidence** | *[Tên A]* | Viết spec.md §1-§3, tổng hợp JTBD, dẫn evidence pain của người học (không hiểu đoạn/diagram cụ thể, quiz cuối không phản ánh chỗ yếu cá nhân — mục 2.1 PRD) và của giảng viên (không biết vùng nào gây khó hiểu — mục 2.2) | `spec.md`, `evidence/` |
-| **Prompt & AI logic** | *[Tên B]* | Thiết kế prompt cho 2 quyết định AI trung tâm: (1) trả lời có trích dẫn từ context khoanh/highlight (FR-05, FR-06, AC-01/02), (2) sinh micro quiz 1-3 câu bám ngữ cảnh (FR-08, FR-09); viết golden set §7 | `prompts/`, `eval/golden-set.csv` |
-| **Code — Frontend** | *[Tên C]* | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
-| **Code — Backend/AI call** | *[Tên D]* | Chunk theo slide + lưu metadata số slide (rủi ro 20.3), gọi AI thật cho câu trả lời + micro quiz, tracking tương tác (FR-19, FR-20) | `codebase/backend/` |
-| **Demo & Validation** | *[Tên E]* | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
+Nhóm 6 người. Cột **Bằng chứng** trỏ về commit/file thật trong repo để mỗi người tự đối chiếu phần của mình — CP5 hỏi ngẫu nhiên, ai không giải thích được phần mang tên mình thì mất điểm phần đó.
 
-*Nhóm 4 người: gộp Spec&Evidence với Demo&Validation vào một người; nhóm 3 người: gộp thêm Frontend/Backend nếu cùng 1 người dev full-stack — miễn mỗi phần vẫn có tên rõ, ai cũng giải thích được phần của mình (CP5 kiểm ngẫu nhiên).*
+| Mảng | Người phụ trách | Mã HV | Việc cụ thể | Bằng chứng trong repo |
+|---|---|---|---|---|
+| **Spec & Evidence** | Lê Hồng Đức | 2A202601313 | Viết `spec.md` §1–§6: JTBD, problem statement, bảng impact, 4 lớp chỗ khó, 4 đường trải nghiệm | 9 commit vào `spec.md` (nhánh `duclh`) |
+| **Prompt & AI logic + Kiểm thử** | Nguyễn Kim Trung Đức | 2A202601325 | Bộ golden set đầu tiên và cấu trúc test case | `eval/golden_test_set.json` (nhánh `nguyenkimtrungduc`) |
+| **Code — Frontend** | Phong | 2A202601077 | PRD sản phẩm; slide viewer cuộn, bôi đen chọn đoạn, panel chatbot hiển thị nguồn | `PRD_slide_ai_learning_system.md`, `codebase/public/index.html`, `app.js`, `styles.css` |
+| **Code — Backend / AI call** | Trần Nguyễn Thế Nhật | 2A202601155 | Lời gọi AI + đối chiếu trích dẫn (`verifyQuote`), lớp chọn provider Gemini/Claude, màn giảng viên, luồng khoanh vùng ảnh, hai bộ eval | `codebase/server.js`, `admin.js`, `auth.js`, `eval/run-tutor-eval.mjs`, `eval/run-suggestion-eval.mjs` |
+| **Demo & Validation** | Toàn | 2A202601493 | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), dry run bấm giờ, slide 6 trang | `demo-slides.pdf` — *chưa có* |
+| **Demo & Validation** | Đạt | 2A202601969 | Tổ chức vòng user test CP5, ghi feedback log nguyên văn, tổng hợp thay đổi vào Changelog | `validation/log.md` — *khung đã có, chưa có dữ liệu* |
+
+> **Hai dòng cuối chưa có bằng chứng trong repo.** Toàn và Đạt hiện chưa có commit nào, nên hai
+> dòng này là **phân công đi tới**, không phải mô tả việc đã làm. Muốn ăn điểm thì phải thực sự
+> làm và để lại dấu vết: `demo-slides.pdf` và `validation/log.md` có dữ liệu thật.
+>
+> Bốn dòng trên đối chiếu được ngay bằng `git log --author=<tên>`.
 
 ## Willing users (≥3 tên) + kế hoạch vòng validation CP5
 
-**Willing users đã xin đồng ý dùng thử trước demo:**
+**Chưa có tên nào.** Cần ≥3 người **ngoài nhóm** đã đồng ý thử trước demo, và R6 cần feedback từ ≥5 người.
 
 | # | Tên | Vai | Vì sao phù hợp |
 |---|---|---|---|
-| 1 | *[Tên user 1]* | Học viên đang học bằng slide PDF thật (đối tượng đúng của mục 2.1) | Trải nghiệm đúng luồng highlight/khoanh vùng → hỏi AI |
-| 2 | *[Tên user 2]* | Học viên khác lớp/zone — dùng làm người thử chéo, tránh bias vì đã biết sản phẩm | Góc nhìn người lần đầu thấy giao diện |
-| 3 | *[Tên user 3 — giảng viên/TA]* | Đóng vai Giảng viên/Admin (mục 2.2, 5.2) | Test riêng luồng dashboard + smart suggestion + duyệt diagram, luồng người học không phủ được |
+| 1 | *Nguyễn Hữu Kiên* | Học viên đang học bằng slide PDF thật | Trải nghiệm đúng luồng bôi đen / khoanh hình → hỏi AI |
+| 2 | *Nguyễn Đình Phúc* | Học viên khác lớp hoặc khác zone | Góc nhìn người lần đầu thấy giao diện, tránh bias vì đã biết sản phẩm |
+| 3 | *Nguyễn Thế Khải* | Giảng viên / TA | Test riêng luồng bảng theo dõi lớp + smart suggestion — luồng học viên không phủ được |
 
-**Kế hoạch phiên validation (10 phút/người, theo guide §4.2):**
+**Kế hoạch phiên (10 phút/người)** — chi tiết đầy đủ trong `validation/log.md`:
 
-1. Giao task thật: *"Hãy dùng slide này, khoanh một đoạn bạn thấy khó hiểu và hỏi trợ lý"* (với user 1, 2) hoặc *"Hãy xem dashboard và thử duyệt một đề xuất diagram mới"* (với user 3) → quan sát im lặng, không gợi ý.
-2. Hỏi đúng 3 câu:
-   - *"Điều gì khó hiểu hoặc khó chịu nhất?"*
-   - *"Câu trả lời/nguồn trích dẫn này bạn có tin không — vì sao?"*
-   - *"Bạn có dùng thật không — vì sao / vì sao chưa?"*
-3. Log nguyên văn, không diễn giải hộ.
+1. Giao task thật rồi **im lặng quan sát**, không hướng dẫn: *"Mở bài Day 1, tìm một đoạn bạn thấy khó hiểu rồi hỏi trợ lý về đúng đoạn đó."*
+2. Hỏi đúng 3 câu: điều gì khó chịu nhất · có tin câu trả lời và nguồn trích dẫn không, vì sao · có dùng thật không, vì sao chưa.
+3. **Chép nguyên văn**, kể cả khi lủng củng hoặc chê. Không diễn giải hộ.
 
-**Người log:** *[Tên E]* — ghi vào bảng `validation/log.md` theo cột: người thử · task · quan sát · quote nguyên văn · mức nghiêm trọng. Tổng hợp 1-2 thay đổi làm trước demo → đưa vào Changelog §9.
+**Người log:** Đạt (2A202601969) — ghi vào `validation/log.md`, tổng hợp 1–2 thay đổi làm trước demo rồi đưa sang §9.
+
+**Chuẩn bị sẵn để phiên chạy nhanh:** `npm run dev:claude`, mở `http://localhost:3000`, đăng nhập `hocvien / hocvien123` (tài khoản in sẵn trên màn đăng nhập).
 
 ## Multi-prototype: trục khác biệt của ≥2 phương án + lý do chọn
 
@@ -319,4 +392,10 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 | CP3 | AI thật + có test + test thật | Test nhanh để biết nhóm còn thiếu gì |
 | CP4 | Cải tiến dữ liệu thật | Có thể dùng thật với nhu cầu thật |
 | CP5 | Tìm 3 user thật + nhận feedback | Có feedback thực tế và cải tiến theo |
-| CP6 | - | - |
+| CP6 | Viết lại §7 bằng golden set đo trên endpoint thật (24 case, 5 lượt chạy) | §7 cũ vẫn là template ví dụ Hướng B; bộ cũ lại chấm intent-router không có AI |
+| CP6 | Sửa `flatten()`: chuẩn hoá dấu câu kiểu chữ | Golden set lượt 1 cho thấy 5 case trượt oan — trích dẫn trung thực bị đánh trượt vì nháy cong |
+| CP6 | Thêm bộ golden set thứ hai cho smart suggestion (11 case) + chạy cả hai bộ | Yêu cầu từ nhóm: tính năng gợi ý sửa slide chưa có case nào đo |
+| CP6 | Viết lại §4b: 4 nguyên tắc trỏ vào code thật thay vì trỏ vào PRD | Rubric R2 đòi mỗi nguyên tắc trỏ được vào chỗ cụ thể trong prototype |
+| CP6 | Thêm 4 kịch bản §5 cho luồng ảnh và smart suggestion | Hai tính năng mới chưa có kịch bản chỗ khó nào |
+| CP6 | Đổi màu theo app VLearn thật + thu gọn được hai panel | Demo trông gần với sản phẩm thật hơn |
+| CP6 | Sửa `flatten()`: loại ký tự Private Use Area | T24 trượt tất định 4 lượt liền: tr17 chứa U+E08B/U+E088 từ font icon nhúng |

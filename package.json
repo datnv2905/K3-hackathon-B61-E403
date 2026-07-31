@@ -12,6 +12,9 @@
     "start": "node codebase/server.js",
     "dev:claude": "node codebase/server.js --claude",
     "start:claude": "node codebase/server.js --claude",
-    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json"
+    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json",
+    "test:tutor": "node eval/run-tutor-eval.mjs",
+    "test:suggestion": "node eval/run-suggestion-eval.mjs",
+    "test:all": "npm run test:tutor && npm run test:suggestion"
   }
 }

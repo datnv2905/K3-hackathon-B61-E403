@@ -1,0 +1,139 @@
+{
+  "dataset_id": "vlearn_suggestion_golden_v1",
+  "target": "POST /api/admin/suggestions",
+  "lessonId": "day06-ai-product-method",
+  "description": "Golden set cho tính năng smart suggestion ở màn giảng viên: AI đọc số liệu tổng hợp từng trang rồi viết nhận định + đề xuất sửa trang nào trước. Mỗi case tự nạp một bộ event cố định vào codebase/var/events.jsonl rồi gọi endpoint thật, nên kết quả tái lập được chứ không phụ thuộc dữ liệu đang có trên máy.",
+  "safety_note": "Runner GHI ĐÈ codebase/var/events.jsonl trong lúc chạy và khôi phục nguyên trạng khi xong (kể cả khi lỗi). File này nằm trong .gitignore và chỉ là log runtime, nhưng vẫn backup để không mất dữ liệu demo đang có.",
+  "dimensions": {
+    "signal_guard": "Chặn đúng lúc: trang chưa đủ tín hiệu (<2 câu hỏi VÀ <2 lượt bôi đen) phải trả 422 và KHÔNG gọi model — mirror đường từ chối của tutor, thay vì để model bịa ra một đề xuất từ chỗ trống.",
+    "no_fabricated_numbers": "Không bịa số: mọi con số xuất hiện trong insight/recommendation phải nằm trong tập số server thực sự đưa vào prompt. Đây là chiều quan trọng nhất — giảng viên sẽ hành động dựa trên các con số này.",
+    "page_fidelity": "Bám đúng trang: pageNumber trả về phải khớp trang được hỏi.",
+    "evidence_integrity": "Bằng chứng đúng: evidence.affectedLearners đếm NGƯỜI (sessionId phân biệt) chứ không đếm lượt, và affectedRate không vượt 100%."
+  },
+  "cases": [
+    {
+      "id": "S01",
+      "dimension": "signal_guard",
+      "what_it_tests": "Trang không có tín hiệu nào — phải từ chối, không gọi AI.",
+      "pageNumber": 3,
+      "events": [],
+      "expect": { "status": 422 }
+    },
+    {
+      "id": "S02",
+      "dimension": "signal_guard",
+      "what_it_tests": "Đúng 1 câu hỏi — vẫn dưới ngưỡng (cần ≥2). Ranh giới dễ sai nhất.",
+      "pageNumber": 3,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 3, "question": "Problem scoping là gì?" }
+      ],
+      "expect": { "status": 422 }
+    },
+    {
+      "id": "S03",
+      "dimension": "signal_guard",
+      "what_it_tests": "Đúng 1 lượt bôi đen — cũng dưới ngưỡng.",
+      "pageNumber": 3,
+      "events": [{ "type": "selection_text", "sessionId": "s1", "pageNumber": 3, "length": 120 }],
+      "expect": { "status": 422 }
+    },
+    {
+      "id": "S04",
+      "dimension": "signal_guard",
+      "what_it_tests": "2 câu hỏi — vừa chạm ngưỡng, phải gọi AI và trả đề xuất.",
+      "pageNumber": 3,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 3, "question": "Problem scoping là gì?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 3, "question": "Vì sao không được nhắc AI trong problem statement?" }
+      ],
+      "expect": { "status": 200 }
+    },
+    {
+      "id": "S05",
+      "dimension": "signal_guard",
+      "what_it_tests": "0 câu hỏi nhưng 2 lượt bôi đen — ngưỡng là HOẶC, không phải VÀ.",
+      "pageNumber": 4,
+      "events": [
+        { "type": "selection_text", "sessionId": "s1", "pageNumber": 4, "length": 90 },
+        { "type": "selection_text", "sessionId": "s2", "pageNumber": 4, "length": 140 }
+      ],
+      "expect": { "status": 200 }
+    },
+    {
+      "id": "S06",
+      "dimension": "no_fabricated_numbers",
+      "what_it_tests": "Trang nhiều tín hiệu, có cả quiz sai — chỗ model dễ chèn số tự nghĩ ra nhất.",
+      "pageNumber": 2,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Bằng chứng chuẩn A khác chuẩn B thế nào?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 2, "question": "Bằng chứng chuẩn A khác chuẩn B thế nào?" },
+        { "type": "ask_question", "sessionId": "s3", "pageNumber": 2, "question": "Khảo sát bao nhiêu người thì đủ?" },
+        { "type": "selection_text", "sessionId": "s1", "pageNumber": 2, "length": 200 },
+        { "type": "quiz_generated", "sessionId": "s1", "quizId": "q1", "pageNumber": 2, "count": 2 },
+        { "type": "quiz_answered", "sessionId": "s1", "quizId": "q1", "pageNumber": 2, "isCorrect": false },
+        { "type": "quiz_answered", "sessionId": "s2", "quizId": "q1", "pageNumber": 2, "isCorrect": false },
+        { "type": "quiz_answered", "sessionId": "s3", "quizId": "q1", "pageNumber": 2, "isCorrect": true }
+      ],
+      "expect": { "status": 200, "noFabricatedNumbers": true }
+    },
+    {
+      "id": "S07",
+      "dimension": "no_fabricated_numbers",
+      "what_it_tests": "Chỉ có câu hỏi, không có dữ liệu quiz — model không được tự bịa ra tỷ lệ trả lời sai.",
+      "pageNumber": 5,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 5, "question": "Lát cắt một câu gồm mấy phần?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 5, "question": "Lát cắt một câu gồm mấy phần?" },
+        { "type": "ask_question", "sessionId": "s3", "pageNumber": 5, "question": "Non-goal nghĩa là gì?" }
+      ],
+      "expect": { "status": 200, "noFabricatedNumbers": true }
+    },
+    {
+      "id": "S08",
+      "dimension": "page_fidelity",
+      "what_it_tests": "Nhiều trang cùng có tín hiệu — đề xuất phải bám đúng trang được hỏi, không trôi sang trang khác.",
+      "pageNumber": 6,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi ở trang 2" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 2, "question": "Câu hỏi khác ở trang 2" },
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 6, "question": "Quality bar chốt lúc nào?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 6, "question": "Quality bar chốt lúc nào?" }
+      ],
+      "expect": { "status": 200, "pageNumber": 6, "noFabricatedNumbers": true }
+    },
+    {
+      "id": "S09",
+      "dimension": "evidence_integrity",
+      "what_it_tests": "MỘT người hỏi 5 lần trên cùng trang. affectedLearners phải = 1 (đếm người), không phải 5 (đếm lượt) — nếu đếm lượt thì affectedRate vọt quá 100%.",
+      "pageNumber": 1,
+      "events": [
+        { "type": "ask_question", "sessionId": "solo", "pageNumber": 1, "question": "Câu 1" },
+        { "type": "ask_question", "sessionId": "solo", "pageNumber": 1, "question": "Câu 2" },
+        { "type": "ask_question", "sessionId": "solo", "pageNumber": 1, "question": "Câu 3" },
+        { "type": "ask_question", "sessionId": "solo", "pageNumber": 1, "question": "Câu 4" },
+        { "type": "ask_question", "sessionId": "solo", "pageNumber": 1, "question": "Câu 5" },
+        { "type": "ask_question", "sessionId": "khac", "pageNumber": 2, "question": "Người thứ hai" }
+      ],
+      "expect": { "status": 200, "affectedLearners": 1, "affectedRateAtMost": 1 }
+    },
+    {
+      "id": "S10",
+      "dimension": "page_fidelity",
+      "what_it_tests": "Trang không tồn tại trong bài (bài mock chỉ có 6 trang) — phải 404, không phải bịa đề xuất.",
+      "pageNumber": 99,
+      "events": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 99, "question": "Trang không tồn tại" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 99, "question": "Trang không tồn tại" }
+      ],
+      "expect": { "status": 404 }
+    },
+    {
+      "id": "S11",
+      "dimension": "page_fidelity",
+      "what_it_tests": "pageNumber sai kiểu — phải 400 chứ không đoán bừa một trang.",
+      "pageNumber": "khong-phai-so",
+      "events": [],
+      "expect": { "status": 400 }
+    }
+  ]
+}

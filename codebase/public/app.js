@@ -6,6 +6,13 @@ const DUPLICATE_THRESHOLD = 0.7;
 const PDFJS_MODULE_URL = "/vendor/pdfjs/pdf.min.mjs";
 const PDFJS_WORKER_URL = "/vendor/pdfjs/pdf.worker.min.mjs";
 const PDF_RENDER_ROOT_MARGIN = "1200px 0px"; // render pages ~1.5 screens before they're visible
+// Che do chon: "text" boi den chu (mac dinh, duong cu), "image" khoanh vung anh.
+// Mot cu chi keo duy nhat, hai y dinh khac nhau - nen phai co cong tac hien ro tren
+// thanh cong cu thay vi phim tat, de nguoi xem demo thay duoc dang o che do nao.
+let selectMode = "text";
+// Chan canh dai cua anh cat. Vung khoanh to + devicePixelRatio 2 de ra anh vai nghin
+// pixel; gui thang len se doi token va lam cham demo ma khong them do chinh xac.
+const MAX_CROP_EDGE = 1400;
 
 const RATING_REASONS = [
   "Không liên quan đến nội dung vừa hỏi",
@@ -26,6 +33,11 @@ const els = {
   askBtn: document.querySelector("#askBtn"),
   questionInput: document.querySelector("#questionInput"),
   clearSelectionBtn: document.querySelector("#clearSelectionBtn"),
+  modeTextBtn: document.querySelector("#modeTextBtn"),
+  modeImageBtn: document.querySelector("#modeImageBtn"),
+  toolHint: document.querySelector("#toolHint"),
+  toggleSidebarBtn: document.querySelector("#toggleSidebarBtn"),
+  toggleTutorBtn: document.querySelector("#toggleTutorBtn"),
   resetSessionBtn: document.querySelector("#resetSessionBtn"),
   finalQuizBtn: document.querySelector("#finalQuizBtn"),
   finalOverlay: document.querySelector("#finalOverlay"),
@@ -149,8 +161,11 @@ async function loadHealth() {
   try {
     const response = await fetch("/api/health");
     const data = await response.json();
-    els.modelPill.textContent = data.hasGeminiKey ? data.model : "Chưa có API key";
-    els.modelPill.classList.toggle("is-off", !data.hasGeminiKey);
+    // hasApiKey chứ không phải hasGeminiKey: chạy --claude mà máy không có key
+    // Gemini thì pill sẽ báo sai "Chưa có API key" dù Claude đang hoạt động bình thường.
+    const ready = data.hasApiKey ?? data.hasGeminiKey;
+    els.modelPill.textContent = ready ? data.model : "Chưa có API key";
+    els.modelPill.classList.toggle("is-off", !ready);
   } catch {
     els.modelPill.textContent = "Offline";
     els.modelPill.classList.add("is-off");
@@ -166,6 +181,112 @@ function bindEvents() {
   els.finalQuizBtn.addEventListener("click", openFinalQuiz);
   els.closeFinalBtn.addEventListener("click", () => (els.finalOverlay.hidden = true));
   els.viewer.addEventListener("pointerup", captureTextSelection);
+  els.toggleSidebarBtn?.addEventListener("click", () => togglePanel("sidebar"));
+  els.toggleTutorBtn?.addEventListener("click", () => togglePanel("tutor"));
+  restorePanelState();
+  els.modeTextBtn?.addEventListener("click", () => setSelectMode("text"));
+  els.modeImageBtn?.addEventListener("click", () => setSelectMode("image"));
+}
+
+// Thu gọn panel trái (danh sách bài) hoặc phải (AI tutor). Nhớ lựa chọn qua
+// localStorage vì đây là thói quen đọc của từng người, không phải trạng thái phiên.
+const PANEL_KEY = "vlearn-panels-v1";
+
+function togglePanel(which) {
+  const cls = which === "sidebar" ? "sidebar-collapsed" : "tutor-collapsed";
+  const collapsed = document.body.classList.toggle(cls);
+  paintPanelToggle(which, collapsed);
+  const saved = readPanelState();
+  saved[which] = collapsed;
+  localStorage.setItem(PANEL_KEY, JSON.stringify(saved));
+}
+
+function restorePanelState() {
+  const saved = readPanelState();
+  for (const which of ["sidebar", "tutor"]) {
+    const collapsed = Boolean(saved[which]);
+    document.body.classList.toggle(which === "sidebar" ? "sidebar-collapsed" : "tutor-collapsed", collapsed);
+    paintPanelToggle(which, collapsed);
+  }
+}
+
+function paintPanelToggle(which, collapsed) {
+  const btn = which === "sidebar" ? els.toggleSidebarBtn : els.toggleTutorBtn;
+  if (!btn) return;
+  // Mũi tên luôn chỉ về hướng mà cú bấm sẽ đưa panel tới.
+  const open = which === "sidebar" ? "‹" : "›";
+  const shut = which === "sidebar" ? "›" : "‹";
+  btn.textContent = collapsed ? shut : open;
+  const label = which === "sidebar" ? "danh sách bài giảng" : "AI Tutor";
+  btn.title = `${collapsed ? "Mở lại" : "Thu gọn"} ${label}`;
+  btn.setAttribute("aria-label", btn.title);
+}
+
+function readPanelState() {
+  try {
+    return JSON.parse(localStorage.getItem(PANEL_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setSelectMode(mode) {
+  if (selectMode === mode) return;
+  selectMode = mode;
+  clearSelection();
+
+  const isImage = mode === "image";
+  els.modeTextBtn?.classList.toggle("is-active", !isImage);
+  els.modeImageBtn?.classList.toggle("is-active", isImage);
+  els.modeTextBtn?.setAttribute("aria-checked", String(!isImage));
+  els.modeImageBtn?.setAttribute("aria-checked", String(isImage));
+  els.toolHint.textContent = isImage
+    ? "Kéo một khung quanh hình để hỏi AI"
+    : "Bôi đen một đoạn để hỏi AI";
+  els.viewer.classList.toggle("is-region-mode", isImage);
+  trackEvent("select_mode_changed", { mode });
+}
+
+// Cắt đúng vùng người học kéo ra khỏi canvas đã render, rồi giữ lại dưới dạng data URL
+// để gửi kèm câu hỏi. Canvas render ở scale × devicePixelRatio còn hộp kéo đo bằng
+// pixel CSS — quên nhân tỉ lệ này thì trên màn Retina sẽ cắt lệch mất một nửa.
+function selectRegionImage(pageNumber, box, body) {
+  const canvas = body.querySelector("canvas");
+  if (!canvas) return;
+
+  const ratio = canvas.width / parseFloat(canvas.style.width || canvas.width);
+  const sx = Math.max(0, Math.round(box.left * ratio));
+  const sy = Math.max(0, Math.round(box.top * ratio));
+  const sw = Math.min(canvas.width - sx, Math.round(box.width * ratio));
+  const sh = Math.min(canvas.height - sy, Math.round(box.height * ratio));
+  if (sw < 16 || sh < 16) return;
+
+  // Thu nhỏ nếu vượt cạnh tối đa — giữ nguyên tỉ lệ khung hình.
+  const shrink = Math.min(1, MAX_CROP_EDGE / Math.max(sw, sh));
+  const out = document.createElement("canvas");
+  out.width = Math.round(sw * shrink);
+  out.height = Math.round(sh * shrink);
+  out.getContext("2d").drawImage(canvas, sx, sy, sw, sh, 0, 0, out.width, out.height);
+
+  const pageW = parseFloat(canvas.style.width) || canvas.width;
+  const pageH = parseFloat(canvas.style.height) || canvas.height;
+
+  selection = {
+    id: crypto.randomUUID(),
+    type: "region",
+    pageNumber,
+    dataUrl: out.toDataURL("image/jpeg", 0.82),
+    region: {
+      pageNumber,
+      x: Math.round((box.left / pageW) * 100),
+      y: Math.round((box.top / pageH) * 100),
+      width: Math.round((box.width / pageW) * 100),
+      height: Math.round((box.height / pageH) * 100),
+    },
+  };
+
+  renderSelection();
+  trackEvent("selection_region", { pageNumber, width: out.width, height: out.height });
 }
 
 /* ── Slide viewer ────────────────────────────────────────── */
@@ -424,8 +545,11 @@ function endPdfDrag(event) {
     return;
   }
 
-  // Every drag on a PDF page highlights a passage — there is no region mode.
-  selectTextInBox(drag.pageNumber, boxLocal, drag.body);
+  if (selectMode === "image") {
+    selectRegionImage(drag.pageNumber, boxLocal, drag.body);
+  } else {
+    selectTextInBox(drag.pageNumber, boxLocal, drag.body);
+  }
   releaseDrag(event);
 }
 
@@ -519,15 +643,32 @@ function paintRegion(event) {
 function clearSelection() {
   selection = null;
   window.getSelection()?.removeAllRanges();
-  document.querySelectorAll(".text-highlight-box").forEach((box) => box.remove());
+  document.querySelectorAll(".text-highlight-box, .drag-box").forEach((box) => box.remove());
   renderSelection();
 }
 
 function renderSelection() {
+  els.contextPreview.innerHTML = "";
+
   if (!selection) {
     els.contextPreview.textContent = "Chưa chọn nội dung";
     return;
   }
+
+  if (selection.type === "region") {
+    // Hiện đúng ảnh sắp gửi đi, không phải mô tả toạ độ. Người học phải thấy được
+    // AI sắp nhìn cái gì trước khi bấm hỏi — cắt hụt hay cắt lệch thì lộ ra ngay.
+    const label = document.createElement("p");
+    label.className = "region-label";
+    label.textContent = `Vùng đã khoanh trên trang ${selection.pageNumber}`;
+    const preview = document.createElement("img");
+    preview.className = "region-preview";
+    preview.src = selection.dataUrl;
+    preview.alt = `Vùng đã khoanh trên trang ${selection.pageNumber}`;
+    els.contextPreview.append(label, preview);
+    return;
+  }
+
   els.contextPreview.textContent = `Trang ${selection.pageNumber}: “${selection.text}”`;
 }
 
@@ -553,7 +694,10 @@ async function askTutor(event) {
       lessonId: lesson.id,
       pageNumber,
       question,
-      selectedText: selection?.text || "",
+      selectedText: selection?.type === "text" ? selection.text : "",
+      ...(selection?.type === "region"
+        ? { regionImage: selection.dataUrl, selectedRegion: selection.region }
+        : {}),
     });
 
     replaceMessage(pending.id, {
@@ -674,6 +818,9 @@ function renderMessage(message) {
     if (message.kind === "out_of_scope") flags.appendChild(chip("low", "③ ngoài phạm vi"));
     if (message.kind === "insufficient") flags.appendChild(chip("low", "① bài giảng không đủ căn cứ"));
     if (message.kind === "needs_clarification") flags.appendChild(chip("low", "② cần hỏi lại"));
+    // Cau tra loi doc tu pixel: khong doi chieu duoc voi text bai giang. Noi that
+    // muc kiem chung thay vi de nguyen chip "chua doi chieu duoc nguon" gay hieu nham.
+    if (message.kind === "visual") flags.appendChild(chip("visual", "đọc từ hình — chưa đối chiếu được với text"));
     if (flags.children.length > 0) bubble.appendChild(flags);
 
     if (message.kind === "answer") bubble.appendChild(renderAnswerActions(message));

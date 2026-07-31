@@ -1,14 +1,20 @@
 :root {
-  --bg: #eef1f6;
+  /* Bảng màu lấy từ app VLearn thật: navy + đỏ của logo, nền đọc xanh xám nhạt,
+     trang slide màu giấy kem. Đổi ở đây là đổi toàn bộ hai màn hình. */
+  --bg: #e9eef5;
   --panel: #ffffff;
-  --ink: #16181d;
-  --ink-soft: #5b6270;
-  --ink-faint: #8f97a5;
-  --line: #dfe3ea;
-  --brand: #4f46e5;
-  --brand-soft: #eceafd;
-  --navy: #171a2e;
-  --navy-soft: #2a2e4a;
+  --paper: #fdfbf0;
+  --paper-line: #f2f0e4;
+  --sidebar: #f6f9fc;
+  --ink: #16233f;
+  --ink-soft: #52627d;
+  --ink-faint: #8695ab;
+  --line: #dde5ef;
+  --brand: #1f5fbf;
+  --brand-soft: #e8f0fc;
+  --red: #d92d20;
+  --navy: #16233f;
+  --navy-soft: #eef3f9;
   --ok: #0f9d58;
   --warn: #b25e00;
   --warn-soft: #fdf1dc;
@@ -38,8 +44,9 @@ body {
 .sidebar {
   width: 234px;
   flex-shrink: 0;
-  background: var(--navy);
-  color: #fff;
+  background: var(--sidebar);
+  color: var(--ink);
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   padding: 16px 12px;
@@ -57,11 +64,11 @@ body {
 .brand-mark {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  background: var(--brand);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
+  flex-shrink: 0;
+  /* Là <img> logo thật trong /assets — object-fit giữ đúng tỉ lệ, không bóp méo. */
+  object-fit: contain;
+  background: transparent;
+  border-radius: 6px;
 }
 
 .brand-text {
@@ -72,15 +79,15 @@ body {
 
 .brand-text span {
   font-size: 11px;
-  color: #9aa0c4;
+  color: var(--ink-faint);
 }
 
 .lesson-item {
   width: 100%;
   text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  color: #b9bede;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
   border-radius: var(--radius);
   padding: 9px 11px;
   cursor: pointer;
@@ -91,18 +98,24 @@ body {
 }
 
 .lesson-item strong {
-  font-size: 13px;
-  color: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
+.lesson-item.is-active strong { color: var(--brand); }
+
 .lesson-item.is-active {
-  background: var(--navy-soft);
-  border-color: #3b4066;
+  background: var(--brand-soft);
+  border-color: #bcd4f4;
+  color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 
 .summary {
   margin-top: auto;
-  background: var(--navy-soft);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 12px;
 }
@@ -111,7 +124,7 @@ body {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #9aa0c4;
+  color: var(--ink-faint);
   margin-bottom: 9px;
 }
 
@@ -125,7 +138,7 @@ body {
 
 .summary dt {
   font-size: 12px;
-  color: #b9bede;
+  color: var(--ink-soft);
 }
 
 .summary dd {
@@ -134,9 +147,9 @@ body {
 }
 
 .ghost-btn {
-  background: transparent;
-  border: 1px solid var(--navy-soft);
-  color: #b9bede;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
   border-radius: 8px;
   padding: 8px;
   font-size: 12px;
@@ -147,8 +160,9 @@ body {
 }
 
 .ghost-btn:hover {
-  background: var(--navy-soft);
-  color: #fff;
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 /* ── Shell + topbar ──────────────────────────────────────── */
@@ -245,12 +259,16 @@ body {
 }
 
 .slide {
-  background: var(--panel);
+  background: var(--paper);
+  /* Kẻ dòng mờ như giấy vở — chi tiết nhận diện của app VLearn thật. */
+  background-image: repeating-linear-gradient(
+    var(--paper) 0 30px,
+    var(--paper-line) 30px 31px
+  );
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(20, 24, 40, 0.05);
-  /* Column flex children shrink by default, which clipped the slide body. */
+  box-shadow: 0 1px 3px rgba(22, 35, 63, 0.07);
   flex-shrink: 0;
 }
 
@@ -893,8 +911,9 @@ body {
 .admin-sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: var(--navy);
-  color: #fff;
+  background: var(--sidebar);
+  color: var(--ink);
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -913,9 +932,9 @@ body {
 .admin-field select {
   padding: 8px 10px;
   border-radius: var(--radius);
-  border: 1px solid var(--navy-soft);
-  background: var(--navy-soft);
-  color: #fff;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
   font-size: 13px;
 }
 
@@ -932,12 +951,13 @@ body {
   gap: 8px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  background: var(--navy-soft);
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 
 .admin-stat span {
   font-size: 12px;
-  color: #c7cbe0;
+  color: var(--ink-soft);
 }
 
 .admin-stat strong {
@@ -946,7 +966,7 @@ body {
 
 .admin-note {
   font-size: 11px;
-  color: #9aa0c0;
+  color: var(--ink-faint);
   line-height: 1.5;
   margin-top: auto;
 }
@@ -1348,3 +1368,134 @@ body {
   accent-color: var(--brand);
   cursor: pointer;
 }
+
+/* ── Chế độ chọn: bôi đen chữ / khoanh hình ──────────────── */
+
+.mode-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4f6fa;
+}
+
+.mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.mode-btn.is-active {
+  background: var(--panel);
+  color: var(--brand);
+  box-shadow: 0 1px 3px rgba(23, 26, 46, 0.12);
+}
+
+/* Con trỏ chữ thập báo cho người dùng biết đang ở chế độ khoanh vùng. */
+.viewer.is-region-mode .pdf-page-body,
+.viewer.is-region-mode .pdf-page-body canvas {
+  cursor: crosshair;
+}
+
+.region-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.region-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 160px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.chip.visual {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+/* ── Nhận diện VLearn: chevron navy + nhánh đỏ ───────────── */
+
+/* Asset PNG nền trong suốt được làm sạch từ logo chính thức để giữ cạnh sắc
+   và hiển thị ổn định trên cả nền sáng lẫn tối. */
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  box-sizing: border-box;
+  padding: 3px;
+  border: 1px solid rgba(22, 35, 63, 0.08);
+  border-radius: 9px;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: 0 3px 8px rgba(22, 35, 63, 0.12);
+}
+
+.brand-text strong {
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+
+.brand-text strong::first-letter {
+  color: var(--red);
+}
+
+/* ── Thu gọn hai panel ───────────────────────────────────── */
+
+/* Nút hình tròn nằm đè lên mép panel, giống app thật. Dùng position:absolute
+   trong .workspace nên không chiếm chỗ trong luồng flex khi panel đã thu. */
+.workspace {
+  position: relative;
+}
+
+.panel-toggle {
+  position: absolute;
+  /* Giữa chiều cao mép panel — nếu đặt sát trên sẽ đè lên model pill và dòng
+     "Trang N / 29" của slide đầu tiên. */
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(22, 35, 63, 0.12);
+  transition: background 0.15s, color 0.15s;
+}
+
+.panel-toggle:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
+#toggleSidebarBtn { left: 8px; }
+#toggleTutorBtn { right: 404px; }
+body.tutor-collapsed #toggleTutorBtn { right: 8px; }
+
+/* Thu gọn = ẩn hẳn khỏi luồng, để vùng đọc chiếm trọn chiều ngang. */
+body.sidebar-collapsed .sidebar { display: none; }
+body.tutor-collapsed .tutor { display: none; }
+
+.admin-body .panel-toggle {
+  position: fixed;
+  top: 50%;
+  left: 288px;
+}
+
+body.admin-sidebar-collapsed .panel-toggle { left: 8px; }
+
+body.admin-sidebar-collapsed .admin-sidebar { display: none; }

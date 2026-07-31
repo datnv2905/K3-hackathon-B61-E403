@@ -1,4 +1,67 @@
-# Mini Hackathon AI — Batch 03
+# VLearn AI Tutor — Nhóm B6-1 · Zone 3
+
+**Hướng A (VLearn) · Tính năng mới.** Học viên bôi đen một đoạn slide khó hiểu hoặc khoanh một
+diagram, hỏi AI, nhận giải thích **có trích dẫn số trang đã được server đối chiếu**, rồi làm micro
+quiz kiểm tra hiểu. Kèm màn giảng viên tổng hợp trang nào đang gây khó hiểu.
+
+## Thành viên & phân công
+
+| Mã HV | Tên | Phụ trách |
+|---|---|---|
+| 2A202601313 | Lê Hồng Đức | Spec & Evidence — `spec.md` §1–§6 |
+| 2A202601325 | Nguyễn Kim Trung Đức | Prompt & AI logic + Kiểm thử — golden set |
+| 2A202601077 | Phong | Code Frontend — slide viewer, bôi đen, panel chatbot; PRD |
+| 2A202601155 | Trần Nguyễn Thế Nhật | Code Backend / AI call — lời gọi AI, đối chiếu trích dẫn, màn giảng viên, luồng ảnh, eval |
+| 2A202601493 | Toàn | Demo — kịch bản 5 phút, dry run, `demo-slides.pdf` |
+| 2A202601969 | Đạt | Validation — vòng user test CP5, feedback log |
+
+Chi tiết từng phần kèm bằng chứng commit: `spec.md` §8.
+
+## Chạy thử
+
+Zero-dependency, **không có bước `npm install`**. Cần Node.js ≥ 18.
+
+```bash
+cp .env.example .env      # rồi điền key vào
+npm run dev               # Gemini (mặc định)
+npm run dev:claude        # Claude (claude-haiku-4-5)
+```
+
+Mở `http://localhost:3000`. Hai tài khoản demo in sẵn trên màn đăng nhập:
+
+| Tài khoản | Mật khẩu | Vào đâu |
+|---|---|---|
+| `admin` | `admin123` | Bảng theo dõi lớp |
+| `hocvien` | `hocvien123` | Màn hình học |
+
+> **Mở bằng Chrome.** Safari đời cũ làm vỡ pdf.js — chi tiết trong `codebase/MOCKS.md`.
+>
+> Đăng nhập là **giả lập**, không phải xác thực thật — xem `codebase/MOCKS.md`.
+
+## Chạy kiểm thử
+
+```bash
+npm run test:all          # cả hai bộ (server phải đang chạy)
+npm run test:tutor        # 24 case cho câu trả lời có trích dẫn
+npm run test:suggestion   # 11 case cho smart suggestion
+```
+
+Kết quả từng lượt lưu nguyên trong `eval/results/`, giữ đủ mọi case kể cả case trượt.
+
+## Cấu trúc bài nộp
+
+| Thư mục | Nội dung | Trạng thái |
+|---|---|---|
+| `spec.md` | AI Spec | §1, §2 chờ dữ liệu khảo sát thật |
+| `codebase/` | Prototype — phần nào mock ghi rõ trong `MOCKS.md` | xong |
+| `eval/` | 2 golden set + kết quả các lượt chạy | xong |
+| `validation/` | Feedback log vòng user test | **khung, chưa có dữ liệu** |
+| `reflection/` | Mỗi người 1 file | **chưa có** |
+| `demo-slides.pdf` | Slide 6 trang | **chưa có** |
+
+---
+
+# Đề bài gốc của ban tổ chức
 
 **SPEC → Prototype → Demo.** Đây không phải cuộc thi code — đây là cuộc thi **tư duy sản phẩm AI**.
 

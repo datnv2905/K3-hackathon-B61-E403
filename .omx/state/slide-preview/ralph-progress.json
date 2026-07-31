@@ -1,0 +1,17 @@
+{
+  "score": 92,
+  "threshold": 90,
+  "passed": true,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "Khoảng trống dưới slide còn rộng nhưng không làm mất cân bằng nội dung",
+    "Sơ đồ minh họa là SVG cấu trúc, không phải ảnh raster chi tiết"
+  ],
+  "suggestions": [
+    "Giữ giới hạn 5 node để duy trì khả năng đọc",
+    "Chỉ dùng ảnh raster ở giai đoạn sau khi có pipeline lưu trữ asset"
+  ],
+  "reasoning": "Bố cục hai cột cân đối, chữ và callout nằm trong vùng an toàn, diagram hierarchy đọc rõ và modal đủ lớn để xem chi tiết.",
+  "next_actions": []
+}

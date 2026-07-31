@@ -1,0 +1,197 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_admin_suggestion_golden_set_v1",
+    "target": "POST /api/admin/suggestions",
+    "started_at": "2026-07-31T02:41:59.509Z",
+    "total": 11,
+    "passed": 10,
+    "failed": 1,
+    "pass_rate": 0.9091
+  },
+  "results": [
+    {
+      "id": "TA01_refuse_below_both_thresholds",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA02_refuse_just_under_highlight_threshold",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA03_accept_at_question_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Thắc mắc về khái niệm AI",
+        "insight": "Trang 3 ghi nhận 2 câu hỏi từ 2 người học trong 2 phiên học, bao gồm \"Automation augment với conditional khác nhau ở đâu?\" (1 lần) và \"Cost-of-error nghĩa là sao?\" (1 lần).",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết và ví dụ minh họa cho hai khái niệm Cost-of-error và Automation augment trên trang 3.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Automation augment với conditional khác nhau ở đâu?",
+            "Cost-of-error nghĩa là sao?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:00.789Z"
+      }
+    },
+    {
+      "id": "TA04_accept_at_highlight_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Mức độ tương tác rất thấp",
+        "insight": "Trang 4 ghi nhận 2 người học và 2 lượt đánh dấu highlight, nhưng có 0 câu hỏi được đặt và 0 lượt làm bài quiz.",
+        "recommendation": "Giảng viên nên chủ động bổ sung thêm câu hỏi gợi mở trên trang 4 để khuyến khích người học tương tác.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": []
+        },
+        "generatedAt": "2026-07-31T02:41:08.857Z"
+      }
+    },
+    {
+      "id": "TA05_wrong_rate_full",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 5,
+        "issueType": "Tỷ lệ trả lời sai 100%",
+        "insight": "Tại trang 5, có 3 lượt làm bài trắc nghiệm với tỷ lệ trả lời sai đạt 100%. Ngoài ra, người học cũng đã gửi 2 câu hỏi thắc mắc trên trang này.",
+        "recommendation": "Giảng viên nên làm rõ nội dung về golden set và thời điểm chốt quality bar trực tiếp trên trang 5.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 1,
+          "topQuestions": [
+            "Vì sao golden set cần tối thiểu 20 case?",
+            "Quality bar chốt lúc nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:16.635Z"
+      }
+    },
+    {
+      "id": "TA06_wrong_rate_zero",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 6,
+        "issueType": "Câu hỏi lặp lại nhiều lần",
+        "insight": "Trang 6 ghi nhận 2 câu hỏi từ 2 học viên, trong đó câu hỏi 'Case hiếm trong golden set là loại nào?' được hỏi 2 lần. Mặc dù tỷ lệ trả lời sai là 0% qua 4 lượt làm bài trắc nghiệm đúng, học viên vẫn có thắc mắc cụ thể về khái niệm này.",
+        "recommendation": "Giảng viên nên bổ sung giải thích rõ ràng hoặc ví dụ cụ thể về các trường hợp hiếm trong golden set ngay trên trang 6.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Case hiếm trong golden set là loại nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:28.723Z"
+      }
+    },
+    {
+      "id": "TA07_no_quiz_activity_not_nan",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 1,
+        "issueType": "Thắc mắc về Impact table",
+        "insight": "Trang 1 ghi nhận 3 học viên tham gia, trong đó có 2 lượt đánh dấu và 1 câu hỏi liên quan đến số lượng ứng viên tối thiểu cho Impact table.",
+        "recommendation": "Giảng viên nên bổ sung rõ ràng quy định về số lượng ứng viên tối thiểu cho Impact table trực tiếp tại Trang 1.",
+        "evidence": {
+          "affectedLearners": 3,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Impact table cần tối thiểu mấy ứng viên?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:33.780Z"
+      }
+    },
+    {
+      "id": "TA08_affected_learners_dedup_same_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 2,
+        "issueType": "Nhiều câu hỏi về Problem Scoping",
+        "insight": "Dù chỉ có 1 người học, trang 2 đã ghi nhận tới 5 câu hỏi xoay quanh chủ đề Problem Scoping. Điều này cho thấy phần kiến thức này hiện chưa thực sự rõ ràng đối với người học.",
+        "recommendation": "Giảng viên nên giải thích chi tiết hơn và bổ sung ví dụ thực tế về Problem Scoping trên trang 2.",
+        "evidence": {
+          "affectedLearners": 1,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Câu hỏi 1 về Problem Scoping?",
+            "Câu hỏi 2 về Problem Scoping?",
+            "Câu hỏi 3 về Problem Scoping?",
+            "Câu hỏi 4 về Problem Scoping?",
+            "Câu hỏi 5 về Problem Scoping?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:40.084Z"
+      }
+    },
+    {
+      "id": "TA09_affected_learners_multi_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Câu hỏi lặp lại nhiều lần",
+        "insight": "Trang 3 ghi nhận 4 câu hỏi và cả 4 lần đều là cùng câu hỏi 'Lát cắt một câu gồm mấy phần?'. Điều này cho thấy toàn bộ 4 người học tham gia bài học đều gặp vướng mắc tại nội dung này.",
+        "recommendation": "Giảng viên nên bổ sung giải thích rõ ràng về các phần của lát cắt một câu ngay trên trang 3.",
+        "evidence": {
+          "affectedLearners": 4,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Lát cắt một câu gồm mấy phần?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:46.098Z"
+      }
+    },
+    {
+      "id": "TA10_lesson_isolation",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Thắc mắc thuật ngữ chưa rõ",
+        "insight": "Trang 4 ghi nhận 2 câu hỏi và cả 2 lần đều xoay quanh nội dung \"Non-goals nghĩa là gì?\". Điều này cho thấy khái niệm này gây bối rối cho 2 học viên tham gia bài học.",
+        "recommendation": "Giảng viên nên bổ sung giải thích hoặc ví dụ minh họa cho thuật ngữ \"Non-goals\" trực tiếp trên trang 4.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Non-goals nghĩa là gì?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:41:53.027Z"
+      }
+    },
+    {
+      "id": "TA11_common_question_repetition_ranking",
+      "pass": false,
+      "diagnostics": [
+        "expected HTTP 200, got 502: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      ],
+      "actual": {
+        "error": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    }
+  ]
+}

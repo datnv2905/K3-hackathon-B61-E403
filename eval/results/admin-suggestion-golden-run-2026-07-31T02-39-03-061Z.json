@@ -1,0 +1,216 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_admin_suggestion_golden_set_v1",
+    "target": "POST /api/admin/suggestions",
+    "started_at": "2026-07-31T02:39:03.061Z",
+    "total": 11,
+    "passed": 8,
+    "failed": 3,
+    "pass_rate": 0.7273
+  },
+  "results": [
+    {
+      "id": "TA01_refuse_below_both_thresholds",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA02_refuse_just_under_highlight_threshold",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA03_accept_at_question_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Nhiều câu hỏi về khái niệm",
+        "insight": "Trên trang 3, có 2 người học đã gửi 2 câu hỏi thắc mắc (mỗi câu được hỏi 1x), trong khi số lượt highlight và lượt làm quiz đều bằng 0.",
+        "recommendation": "Giảng viên nên làm rõ nội dung về Cost-of-error và sự khác nhau giữa Automation augment với conditional ngay trên trang 3.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Automation augment với conditional khác nhau ở đâu?",
+            "Cost-of-error nghĩa là sao?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:08.334Z"
+      }
+    },
+    {
+      "id": "TA04_accept_at_highlight_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Thiếu bài tập tương tác",
+        "insight": "Trang 4 ghi nhận 2 lượt đánh dấu từ 2 người học, nhưng có 0 câu hỏi được đặt và 0 lượt làm bài kiểm tra.",
+        "recommendation": "Giảng viên nên thêm các câu hỏi trắc nghiệm ngắn vào trang 4 để kích thích tương tác cho 2 người học.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": []
+        },
+        "generatedAt": "2026-07-31T02:38:15.588Z"
+      }
+    },
+    {
+      "id": "TA05_wrong_rate_full",
+      "pass": false,
+      "diagnostics": [
+        "evidence.affectedRate expected 1, got 0.6666666666666666",
+        "possible fabricated number in AI text: \"20\" not found in evidence (allowed: 0, 2, 3, 5, 67, 100) — insight/recommendation: \"Trang 5 ghi nhận 3 lượt làm bài quiz với tỷ lệ sai 100% và có 2 câu hỏi được đặt ra từ 3 học viên.\" / \"Giảng viên nên giải thích chi tiết hơn về thời điểm chốt quality bar và lý do golden set cần tối thiểu 20 case trên trang 5.\""
+      ],
+      "actual": {
+        "pageNumber": 5,
+        "issueType": "Tỷ lệ trả lời sai 100%",
+        "insight": "Trang 5 ghi nhận 3 lượt làm bài quiz với tỷ lệ sai 100% và có 2 câu hỏi được đặt ra từ 3 học viên.",
+        "recommendation": "Giảng viên nên giải thích chi tiết hơn về thời điểm chốt quality bar và lý do golden set cần tối thiểu 20 case trên trang 5.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 0.6666666666666666,
+          "wrongRate": 1,
+          "topQuestions": [
+            "Vì sao golden set cần tối thiểu 20 case?",
+            "Quality bar chốt lúc nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:20.862Z"
+      }
+    },
+    {
+      "id": "TA06_wrong_rate_zero",
+      "pass": false,
+      "diagnostics": [
+        "evidence.affectedRate expected 1, got 0.5"
+      ],
+      "actual": {
+        "pageNumber": 6,
+        "issueType": "Câu hỏi lặp lại về khái niệm",
+        "insight": "Trang 6 ghi nhận 2 câu hỏi và đều có cùng nội dung 'Case hiếm trong golden set là loại nào?'. Mặc dù 4 lượt làm bài kiểm tra đều đạt kết quả đúng với tỷ lệ sai 0%, học viên vẫn có thắc mắc chung về nội dung này.",
+        "recommendation": "Giảng viên nên bổ sung định nghĩa hoặc ví dụ chi tiết về case hiếm trong golden set ngay trên trang 6.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 0.5,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Case hiếm trong golden set là loại nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:27.666Z"
+      }
+    },
+    {
+      "id": "TA07_no_quiz_activity_not_nan",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 1,
+        "issueType": "Thắc mắc nội dung Impact table",
+        "insight": "Trong số 3 người học bài học này, trang 1 ghi nhận 2 lượt đánh dấu và 1 câu hỏi. Câu hỏi 'Impact table cần tối thiểu mấy ứng viên?' đã được gửi 1 lần.",
+        "recommendation": "Giảng viên nên bổ sung rõ thông tin về số lượng ứng viên tối thiểu của Impact table vào trang 1.",
+        "evidence": {
+          "affectedLearners": 3,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Impact table cần tối thiểu mấy ứng viên?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:34.241Z"
+      }
+    },
+    {
+      "id": "TA08_affected_learners_dedup_same_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 2,
+        "issueType": "Nhiều câu hỏi về Problem Scoping",
+        "insight": "Trong 1 phiên học, học viên đã đặt 5 câu hỏi khác nhau liên quan đến Problem Scoping tại trang 2. Điều này phản ánh nội dung Problem Scoping trên trang này còn gây nhiều khó hiểu.",
+        "recommendation": "Giảng viên nên giải thích rõ hơn khái niệm Problem Scoping trên trang 2 để làm rõ 5 thắc mắc này của học viên.",
+        "evidence": {
+          "affectedLearners": 1,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Câu hỏi 1 về Problem Scoping?",
+            "Câu hỏi 2 về Problem Scoping?",
+            "Câu hỏi 3 về Problem Scoping?",
+            "Câu hỏi 4 về Problem Scoping?",
+            "Câu hỏi 5 về Problem Scoping?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:40.516Z"
+      }
+    },
+    {
+      "id": "TA09_affected_learners_multi_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Câu hỏi trùng lặp nhiều lần",
+        "insight": "Trang 3 ghi nhận 4 câu hỏi và cả 4 lần đều là cùng câu hỏi 'Lát cắt một câu gồm mấy phần?' từ 4 học viên.",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết về các phần của lát cắt một câu trực tiếp vào nội dung trang 3.",
+        "evidence": {
+          "affectedLearners": 4,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Lát cắt một câu gồm mấy phần?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:51.327Z"
+      }
+    },
+    {
+      "id": "TA10_lesson_isolation",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Thuật ngữ khó hiểu lặp lại",
+        "insight": "Trang 4 ghi nhận 2 lượt hỏi và câu hỏi 'Non-goals nghĩa là gì?' xuất hiện 2 lần từ 2 học viên.",
+        "recommendation": "Giảng viên nên bổ sung giải thích rõ khái niệm 'Non-goals' ngay trên trang 4.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Non-goals nghĩa là gì?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:38:56.341Z"
+      }
+    },
+    {
+      "id": "TA11_common_question_repetition_ranking",
+      "pass": false,
+      "diagnostics": [
+        "possible fabricated number in AI text: \"20\" not found in evidence (allowed: 0, 4, 5, 100) — insight/recommendation: \"Trang 5 ghi nhận 4 câu hỏi từ 4 học viên trong bài học, trong đó câu hỏi 'Vì sao golden set cần tối thiểu 20 case?' xuất hiện đến 3 lần. Điều này cho thấy đa số học viên đều vướng mắc tại cùng một khái niệm.\" / \"Giảng viên nên bổ sung giải thích chi tiết lý do vì sao golden set cần tối thiểu 20 case ngay trên trang 5.\"",
+        "possible fabricated number in AI text: \"20\" not found in evidence (allowed: 0, 4, 5, 100) — insight/recommendation: \"Trang 5 ghi nhận 4 câu hỏi từ 4 học viên trong bài học, trong đó câu hỏi 'Vì sao golden set cần tối thiểu 20 case?' xuất hiện đến 3 lần. Điều này cho thấy đa số học viên đều vướng mắc tại cùng một khái niệm.\" / \"Giảng viên nên bổ sung giải thích chi tiết lý do vì sao golden set cần tối thiểu 20 case ngay trên trang 5.\""
+      ],
+      "actual": {
+        "pageNumber": 5,
+        "issueType": "Câu hỏi lặp lại nhiều lần",
+        "insight": "Trang 5 ghi nhận 4 câu hỏi từ 4 học viên trong bài học, trong đó câu hỏi 'Vì sao golden set cần tối thiểu 20 case?' xuất hiện đến 3 lần. Điều này cho thấy đa số học viên đều vướng mắc tại cùng một khái niệm.",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết lý do vì sao golden set cần tối thiểu 20 case ngay trên trang 5.",
+        "evidence": {
+          "affectedLearners": 4,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Vì sao golden set cần tối thiểu 20 case?",
+            "Đường B mining khác đường A khảo sát ở điểm nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:39:03.059Z"
+      }
+    }
+  ]
+}

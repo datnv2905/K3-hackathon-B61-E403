@@ -1,0 +1,207 @@
+{
+  "dataset_id": "vlearn_admin_suggestion_golden_set_v1",
+  "dataset_role": "golden",
+  "description": "Golden set cho POST /api/admin/suggestions (PRD §12 Smart Suggestion Engine). Khác với golden_test_set.json (kiểm tra một bộ phân loại intent chưa nối vào server thật), bộ này gọi THẬT endpoint đang chạy, với dữ liệu sự kiện giả lập nhưng thực tế, và kiểm hai lớp: (1) đại số tổng hợp — evidence.* phải khớp con số tính tay từ sự kiện đã bơm, không phụ thuộc AI; (2) grounding — mọi con số ≥4 xuất hiện trong insight/recommendation do AI viết phải truy được về một con số thật trong evidence đã cấp cho model, không được bịa.",
+  "target": "POST /api/admin/suggestions",
+  "lessonId": "day06-ai-product-method",
+  "grounding_check": {
+    "applies_to": "cases where expect.refuse === false",
+    "min_number_checked": 4,
+    "rounding_tolerance": 1,
+    "note": "Số <4 (0-3) bị bỏ qua vì quá dễ trùng ngẫu nhiên trong văn viết tự nhiên (vd 'bước 1', liệt kê 3 ý) — không phải bằng chứng bịa số."
+  },
+  "cases": [
+    {
+      "id": "TA01_refuse_below_both_thresholds",
+      "pageNumber": 1,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 1, "question": "Baseline nghĩa là gì?" },
+        { "type": "selection_text", "sessionId": "s2", "pageNumber": 1 }
+      ],
+      "expect": { "refuse": true },
+      "metadata": {
+        "what_it_tests": "Dưới cả hai ngưỡng (questionCount=1<2 VÀ highlightCount=1<2) phải bị từ chối 422 trước khi gọi AI — không được cố nặn ra một suggestion từ gần như không có gì."
+      }
+    },
+    {
+      "id": "TA02_refuse_just_under_highlight_threshold",
+      "pageNumber": 2,
+      "seedEvents": [
+        { "type": "selection_text", "sessionId": "s1", "pageNumber": 2 }
+      ],
+      "expect": { "refuse": true },
+      "metadata": {
+        "what_it_tests": "Chỉ có 1 lượt bôi đen, 0 câu hỏi — vẫn dưới ngưỡng highlightCount>=2, phải từ chối."
+      }
+    },
+    {
+      "id": "TA03_accept_at_question_threshold_boundary",
+      "pageNumber": 3,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 3, "question": "Automation augment với conditional khác nhau ở đâu?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 3, "question": "Cost-of-error nghĩa là sao?" }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 2, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 2 }
+      },
+      "metadata": {
+        "what_it_tests": "Đúng ranh giới dưới của ngưỡng (questionCount=2, đủ điều kiện MIN_SIGNAL_QUESTIONS) phải được chấp nhận, không bị từ chối oan. 2 phiên khác nhau -> affectedLearners=2, không có quiz -> wrongRate=0 chứ không phải NaN/null."
+      }
+    },
+    {
+      "id": "TA04_accept_at_highlight_threshold_boundary",
+      "pageNumber": 4,
+      "seedEvents": [
+        { "type": "selection_text", "sessionId": "s1", "pageNumber": 4 },
+        { "type": "selection_text", "sessionId": "s2", "pageNumber": 4 }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 2, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 0 }
+      },
+      "metadata": {
+        "what_it_tests": "Đạt ngưỡng qua nhánh highlightCount thay vì questionCount (hai điều kiện nối OR trong PRD §12.1). Không có câu hỏi nào -> topQuestions rỗng, không phải lỗi."
+      }
+    },
+    {
+      "id": "TA05_wrong_rate_full",
+      "pageNumber": 5,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 5, "question": "Vì sao golden set cần tối thiểu 20 case?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 5, "question": "Quality bar chốt lúc nào?" },
+        { "type": "quiz_answered", "sessionId": "s1", "pageNumber": 5, "isCorrect": false },
+        { "type": "quiz_answered", "sessionId": "s1", "pageNumber": 5, "isCorrect": false },
+        { "type": "quiz_answered", "sessionId": "s2", "pageNumber": 5, "isCorrect": false }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 2, "affectedRate": 1, "wrongRate": 1, "topQuestionsCount": 2 }
+      },
+      "metadata": {
+        "what_it_tests": "3/3 lượt làm quiz sai -> wrongRate=1.0 (100%). Đây là con số nặng nhất cần AI nhắc đúng trong insight — grounding check sẽ đối chiếu bất kỳ % nào AI nêu với 100%. sessionId của quiz_answered CỐ Ý trùng với sessionId đã hỏi (s1 làm quiz 2 lần, s2 làm 1 lần) — không thêm phiên lạ, để affectedRate giữ đúng 1.0 và case chỉ kiểm một biến (wrongRate) tại một thời điểm."
+      }
+    },
+    {
+      "id": "TA06_wrong_rate_zero",
+      "pageNumber": 6,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 6, "question": "Case hiếm trong golden set là loại nào?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 6, "question": "Case hiếm trong golden set là loại nào?" },
+        { "type": "quiz_answered", "sessionId": "s1", "pageNumber": 6, "isCorrect": true },
+        { "type": "quiz_answered", "sessionId": "s1", "pageNumber": 6, "isCorrect": true },
+        { "type": "quiz_answered", "sessionId": "s2", "pageNumber": 6, "isCorrect": true },
+        { "type": "quiz_answered", "sessionId": "s2", "pageNumber": 6, "isCorrect": true }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 2, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 1 }
+      },
+      "metadata": {
+        "what_it_tests": "4/4 đúng -> wrongRate=0, không phải trang có vấn đề về hiểu bài. Cùng một câu hỏi hỏi bởi 2 phiên khác nhau -> topQuestions chỉ có 1 mục, count=2 (kiểm ở runner, không phải qua topQuestionsCount đơn thuần). quiz_answered tái dùng đúng hai sessionId đã hỏi (mỗi người làm 2 lượt) để affectedRate giữ 1.0 — cùng lý do với TA05."
+      }
+    },
+    {
+      "id": "TA07_no_quiz_activity_not_nan",
+      "pageNumber": 1,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s5", "pageNumber": 1, "question": "Impact table cần tối thiểu mấy ứng viên?" },
+        { "type": "selection_text", "sessionId": "s6", "pageNumber": 1 },
+        { "type": "selection_text", "sessionId": "s7", "pageNumber": 1 }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 3, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 1 }
+      },
+      "metadata": {
+        "what_it_tests": "Có tương tác thật (hỏi + bôi đen) nhưng quizAttempts=0. wrongRate phải là số 0 tường minh — bug thường gặp ở phép chia là ra NaN hoặc null khi mẫu số bằng 0."
+      }
+    },
+    {
+      "id": "TA08_affected_learners_dedup_same_session",
+      "pageNumber": 2,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi 1 về Problem Scoping?" },
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi 2 về Problem Scoping?" },
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi 3 về Problem Scoping?" },
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi 4 về Problem Scoping?" },
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 2, "question": "Câu hỏi 5 về Problem Scoping?" }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 1, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 5 }
+      },
+      "metadata": {
+        "what_it_tests": "MỘT sessionId hỏi 5 lần vẫn là MỘT người học. affectedLearners phải =1, không phải =5 — đúng comment 'đếm người, không đếm lượt' trong buildOverviewAggregate(). Đây là case dễ vỡ nhất nếu ai đó lỡ đổi interactedSessions.size thành questionCount."
+      }
+    },
+    {
+      "id": "TA09_affected_learners_multi_session",
+      "pageNumber": 3,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 3, "question": "Lát cắt một câu gồm mấy phần?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 3, "question": "Lát cắt một câu gồm mấy phần?" },
+        { "type": "ask_question", "sessionId": "s3", "pageNumber": 3, "question": "Lát cắt một câu gồm mấy phần?" },
+        { "type": "ask_question", "sessionId": "s4", "pageNumber": 3, "question": "Lát cắt một câu gồm mấy phần?" }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 4, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 1 }
+      },
+      "metadata": {
+        "what_it_tests": "4 sessionId khác nhau, cùng hỏi một câu -> affectedLearners=4 (đối xứng với TA08: lần này số người và số lượt trùng nhau vì mỗi người chỉ hỏi 1 lần, dùng để phân biệt với case dedup)."
+      }
+    },
+    {
+      "id": "TA10_lesson_isolation",
+      "pageNumber": 4,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 4, "question": "Non-goals nghĩa là gì?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 4, "question": "Non-goals nghĩa là gì?" }
+      ],
+      "foreignSeedEvents": {
+        "lessonId": "d1-ai-llm-foundation",
+        "events": [
+          { "type": "ask_question", "sessionId": "x1", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x2", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x3", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x4", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x5", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x6", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x7", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x8", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x9", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" },
+          { "type": "ask_question", "sessionId": "x10", "pageNumber": 4, "question": "Discriminative AI khác Generative AI ở đâu?" }
+        ]
+      },
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 2, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 1 }
+      },
+      "metadata": {
+        "what_it_tests": "Bơm thêm 10 sự kiện cùng pageNumber=4 nhưng khác lessonId (d1-ai-llm-foundation thay vì day06-ai-product-method). Nếu readEventsForLesson() lọc lessonId sai, affectedLearners sẽ nhảy từ 2 lên 12 và topQuestions sẽ lẫn câu hỏi của bài khác — đây là bài kiểm cách ly dữ liệu giữa hai bài giảng."
+      }
+    },
+    {
+      "id": "TA11_common_question_repetition_ranking",
+      "pageNumber": 5,
+      "seedEvents": [
+        { "type": "ask_question", "sessionId": "s1", "pageNumber": 5, "question": "Vì sao golden set cần tối thiểu 20 case?" },
+        { "type": "ask_question", "sessionId": "s2", "pageNumber": 5, "question": "Vì sao golden set cần tối thiểu 20 case?" },
+        { "type": "ask_question", "sessionId": "s3", "pageNumber": 5, "question": "Vì sao golden set cần tối thiểu 20 case?" },
+        { "type": "ask_question", "sessionId": "s4", "pageNumber": 5, "question": "Đường B mining khác đường A khảo sát ở điểm nào?" }
+      ],
+      "expect": {
+        "refuse": false,
+        "evidence": { "affectedLearners": 4, "affectedRate": 1, "wrongRate": 0, "topQuestionsCount": 2 },
+        "topQuestionRanking": [
+          { "text": "Vì sao golden set cần tối thiểu 20 case?", "count": 3 },
+          { "text": "Đường B mining khác đường A khảo sát ở điểm nào?", "count": 1 }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Câu hỏi lặp lại 3 lần bởi 3 phiên khác nhau phải được gộp đúng (count=3) và xếp trước câu chỉ hỏi 1 lần trong commonQuestions/topQuestions — đây chính là tín hiệu §12.1 'câu hỏi phổ biến' mà suggestion cần bám vào."
+      }
+    }
+  ]
+}

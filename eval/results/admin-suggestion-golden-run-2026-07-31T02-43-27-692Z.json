@@ -1,0 +1,208 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_admin_suggestion_golden_set_v1",
+    "target": "POST /api/admin/suggestions",
+    "started_at": "2026-07-31T02:43:27.692Z",
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "pass_rate": 1
+  },
+  "results": [
+    {
+      "id": "TA01_refuse_below_both_thresholds",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA02_refuse_just_under_highlight_threshold",
+      "pass": true,
+      "diagnostics": []
+    },
+    {
+      "id": "TA03_accept_at_question_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Nhiều thắc mắc về khái niệm",
+        "insight": "Trên trang 3, có 2 câu hỏi được đặt ra từ 2 người học, trong đó có 1 lượt hỏi về sự khác nhau giữa 'Automation augment với conditional' và 1 lượt hỏi về ý nghĩa của 'Cost-of-error'.",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết về khái niệm 'Cost-of-error' và phân biệt 'Automation augment với conditional' ngay trong trang 3.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Automation augment với conditional khác nhau ở đâu?",
+            "Cost-of-error nghĩa là sao?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:42:22.395Z"
+      }
+    },
+    {
+      "id": "TA04_accept_at_highlight_threshold_boundary",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Chưa có câu hỏi tương tác",
+        "insight": "Dù ghi nhận 2 lượt đánh dấu từ 2 người học tại trang 4, nội dung vẫn có 0 câu hỏi được đặt và 0 lượt làm bài kiểm tra. Điều này cho thấy người học mới chỉ dừng lại ở việc đọc và đánh dấu thông tin.",
+        "recommendation": "Giảng viên nên thêm câu hỏi tương tác tại trang 4 để khuyến khích 2 người học chủ động ôn tập kiến thức.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": []
+        },
+        "generatedAt": "2026-07-31T02:42:33.239Z"
+      }
+    },
+    {
+      "id": "TA05_wrong_rate_full",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 5,
+        "issueType": "Tỷ lệ trả lời sai 100%",
+        "insight": "Trang 5 ghi nhận 3 lượt làm quiz với 0 lượt đúng, tương ứng tỷ lệ sai 100%. Bên cạnh đó, người học đã gửi 2 câu hỏi để làm rõ nội dung trên trang này.",
+        "recommendation": "Giảng viên nên giải thích rõ về golden set và quality bar tại trang 5 để cải thiện kết quả cho các lượt làm quiz tiếp theo.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 1,
+          "topQuestions": [
+            "Vì sao golden set cần tối thiểu 20 case?",
+            "Quality bar chốt lúc nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:42:44.285Z"
+      }
+    },
+    {
+      "id": "TA06_wrong_rate_zero",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 6,
+        "issueType": "Câu hỏi trùng lặp nhiều lần",
+        "insight": "Trên trang 6, cả 2 người học đều đưa ra tổng cộng 2 câu hỏi với cùng nội dung \"Case hiếm trong golden set là loại nào?\" (hỏi 2 lần). Mặc dù tỷ lệ trả lời sai quiz là 0% qua 4 lượt làm, nội dung này vẫn gây thắc mắc.",
+        "recommendation": "Giảng viên nên bổ sung định nghĩa và ví dụ rõ ràng về các loại case hiếm trong golden set ngay trên trang 6 để giải đáp trực tiếp cho 2 người học.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Case hiếm trong golden set là loại nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:42:51.374Z"
+      }
+    },
+    {
+      "id": "TA07_no_quiz_activity_not_nan",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 1,
+        "issueType": "Thắc mắc nội dung Impact table",
+        "insight": "Trong số 3 người học, trang 1 ghi nhận 1 câu hỏi và 2 lượt đánh dấu. Câu hỏi 'Impact table cần tối thiểu mấy ứng viên?' đã được hỏi 1 lần.",
+        "recommendation": "Giảng viên nên bổ sung rõ thông tin về số lượng ứng viên tối thiểu cho Impact table ngay trên trang 1.",
+        "evidence": {
+          "affectedLearners": 3,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Impact table cần tối thiểu mấy ứng viên?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:42:57.813Z"
+      }
+    },
+    {
+      "id": "TA08_affected_learners_dedup_same_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 2,
+        "issueType": "Nhiều câu hỏi về Problem Scoping",
+        "insight": "Dù chỉ có 1 người học tham gia, trang 2 đã ghi nhận 5 câu hỏi khác nhau xoay quanh chủ đề Problem Scoping. Điều này cho thấy nội dung khái niệm này trên trang 2 chưa đủ rõ ràng đối với người học.",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết hoặc ví dụ thực tế về Problem Scoping ngay trên trang 2.",
+        "evidence": {
+          "affectedLearners": 1,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Câu hỏi 1 về Problem Scoping?",
+            "Câu hỏi 2 về Problem Scoping?",
+            "Câu hỏi 3 về Problem Scoping?",
+            "Câu hỏi 4 về Problem Scoping?",
+            "Câu hỏi 5 về Problem Scoping?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:43:04.160Z"
+      }
+    },
+    {
+      "id": "TA09_affected_learners_multi_session",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 3,
+        "issueType": "Câu hỏi trùng lặp nhiều lần",
+        "insight": "Trang 3 ghi nhận 4 câu hỏi từ 4 người học, trong đó câu 'Lát cắt một câu gồm mấy phần?' được hỏi 4 lần. Điều này cho thấy nội dung về lát cắt một câu chưa được thể hiện rõ ràng.",
+        "recommendation": "Giảng viên nên bổ sung nội dung giải thích các phần của lát cắt một câu ngay trên trang 3.",
+        "evidence": {
+          "affectedLearners": 4,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Lát cắt một câu gồm mấy phần?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:43:11.019Z"
+      }
+    },
+    {
+      "id": "TA10_lesson_isolation",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 4,
+        "issueType": "Thắc mắc thuật ngữ lặp lại",
+        "insight": "Trang 4 ghi nhận 2 câu hỏi từ 2 học viên, trong đó câu hỏi 'Non-goals nghĩa là gì?' được hỏi 2 lần. Trang hiện có 0 lượt đánh dấu và 0 bài kiểm tra nhỏ được tạo.",
+        "recommendation": "Giảng viên nên bổ sung phần giải thích rõ ràng cho thuật ngữ 'Non-goals' ngay trên trang 4 của bài học.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Non-goals nghĩa là gì?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:43:17.984Z"
+      }
+    },
+    {
+      "id": "TA11_common_question_repetition_ranking",
+      "pass": true,
+      "diagnostics": [],
+      "actual": {
+        "pageNumber": 5,
+        "issueType": "Câu hỏi lặp lại nhiều lần",
+        "insight": "Tại trang 5 có 4 câu hỏi được ghi nhận, trong đó câu hỏi về lý do golden set cần tối thiểu 20 case đã xuất hiện 3 lần.",
+        "recommendation": "Giảng viên nên bổ sung giải thích chi tiết về quy định 20 case của golden set ngay trong nội dung trang 5.",
+        "evidence": {
+          "affectedLearners": 4,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Vì sao golden set cần tối thiểu 20 case?",
+            "Đường B mining khác đường A khảo sát ở điểm nào?"
+          ]
+        },
+        "generatedAt": "2026-07-31T02:43:27.690Z"
+      }
+    }
+  ]
+}

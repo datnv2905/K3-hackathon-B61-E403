@@ -12,6 +12,7 @@
     "start": "node codebase/server.js",
     "dev:claude": "node codebase/server.js --claude",
     "start:claude": "node codebase/server.js --claude",
-    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json"
+    "test:golden": "node eval/run-golden-tests.mjs golden_test_set.json",
+    "test:admin-suggestions": "node eval/run-admin-suggestion-eval.mjs admin_suggestion_golden_set.json"
   }
 }

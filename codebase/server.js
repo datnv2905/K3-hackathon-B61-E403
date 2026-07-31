@@ -1,12 +1,15 @@
 import { createServer } from "node:http";
 import { readFile, appendFile, mkdir } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
-import { extname, join, normalize, relative, resolve } from "node:path";
+import { dirname, extname, join, normalize, relative, resolve } from "node:path";
 
 const rootDir = resolve(process.cwd());
 const publicDir = join(rootDir, "codebase", "public");
 const varDir = join(rootDir, "codebase", "var");
-const eventLogPath = join(varDir, "events.jsonl");
+// Overridable so eval harnesses can point at a throwaway file instead of writing
+// synthetic test events into the same log the live demo reads from.
+const eventLogPath = process.env.EVENTS_LOG_PATH || join(varDir, "events.jsonl");
+const eventLogDir = dirname(eventLogPath);
 const preferredPort = Number(process.env.PORT || 3000);
 
 loadEnv(join(rootDir, ".env"));
@@ -388,7 +391,7 @@ async function handleEvents(req, res) {
 
   if (stamped.length === 0) return sendJson(res, 400, { error: "No events supplied" });
 
-  await mkdir(varDir, { recursive: true });
+  await mkdir(eventLogDir, { recursive: true });
   await appendFile(eventLogPath, stamped.map((event) => JSON.stringify(event)).join("\n") + "\n", "utf8");
   sendJson(res, 200, { stored: stamped.length });
 }

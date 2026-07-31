@@ -16,6 +16,16 @@ const els = {
   suggestBtn: document.querySelector("#suggestBtn"),
   suggestionHint: document.querySelector("#suggestionHint"),
   suggestionCard: document.querySelector("#suggestionCard"),
+  previewBlock: document.querySelector("#previewBlock"),
+  previewHint: document.querySelector("#previewHint"),
+  previewGrid: document.querySelector("#previewGrid"),
+  originalSlide: document.querySelector("#originalSlide"),
+  generatedSlide: document.querySelector("#generatedSlide"),
+  changeSummary: document.querySelector("#changeSummary"),
+  draftStatus: document.querySelector("#draftStatus"),
+  discardPreviewBtn: document.querySelector("#discardPreviewBtn"),
+  regeneratePreviewBtn: document.querySelector("#regeneratePreviewBtn"),
+  applyPreviewBtn: document.querySelector("#applyPreviewBtn"),
 };
 
 let lessons = [];
@@ -23,6 +33,9 @@ let overview = null;
 let selectedPage = null;
 let sortKey = "questionCount";
 let sortDir = -1;
+let currentSuggestion = null;
+let currentPreview = null;
+let previewVariation = 0;
 
 init();
 
@@ -93,6 +106,9 @@ function bindEvents() {
   });
   els.closeDetailBtn.addEventListener("click", closeDetail);
   els.suggestBtn.addEventListener("click", generateSuggestion);
+  els.discardPreviewBtn.addEventListener("click", discardPreview);
+  els.regeneratePreviewBtn.addEventListener("click", generateSlidePreview);
+  els.applyPreviewBtn.addEventListener("click", applyPreviewDraft);
   els.pageTable.querySelectorAll("th[data-sort]").forEach((th) => {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
@@ -224,6 +240,12 @@ function openDetail(pageNumber) {
 
   els.suggestionCard.hidden = true;
   els.suggestionHint.textContent = "";
+  currentSuggestion = null;
+  currentPreview = null;
+  previewVariation = 0;
+  els.previewBlock.hidden = true;
+  els.previewGrid.hidden = true;
+  renderDraftStatus();
   const hasSignal = page.questionCount >= 2 || page.highlightCount >= 2;
   els.suggestBtn.disabled = !hasSignal;
   if (!hasSignal) {
@@ -268,12 +290,117 @@ async function generateSuggestion() {
           ? `<p class="admin-evidence-questions"><strong>Câu hỏi lặp lại:</strong> ${data.evidence.topQuestions.map(escapeHtml).join(" · ")}</p>`
           : ""
       }
+      <div class="admin-suggestion-actions">
+        <button class="final-btn" id="createPreviewBtn" type="button">Tạo slide mẫu</button>
+      </div>
     `;
+    currentSuggestion = data;
+    const createPreviewBtn = document.querySelector("#createPreviewBtn");
+    createPreviewBtn?.addEventListener("click", generateSlidePreview);
   } catch (error) {
     els.suggestionHint.textContent = `Không tạo được: ${error.message}`;
   }
 
   els.suggestBtn.disabled = false;
+}
+
+async function generateSlidePreview() {
+  if (!overview || selectedPage == null || !currentSuggestion) return;
+  previewVariation += 1;
+  els.previewBlock.hidden = false;
+  els.previewGrid.hidden = true;
+  els.previewHint.textContent = previewVariation === 1 ? "Đang tạo slide mẫu…" : "Đang tạo một phương án khác…";
+  els.regeneratePreviewBtn.disabled = true;
+  els.applyPreviewBtn.disabled = true;
+
+  try {
+    const response = await fetch("/api/admin/slide-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lessonId: overview.lessonId,
+        pageNumber: selectedPage,
+        insight: currentSuggestion.insight,
+        recommendation: currentSuggestion.recommendation,
+        variation: previewVariation,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+
+    currentPreview = data;
+    renderSlidePreview(data);
+    els.previewHint.textContent = "";
+    els.previewGrid.hidden = false;
+  } catch (error) {
+    currentPreview = null;
+    els.previewHint.textContent = `Không tạo được slide mẫu: ${error.message}`;
+  }
+
+  els.regeneratePreviewBtn.disabled = false;
+  els.applyPreviewBtn.disabled = !currentPreview;
+}
+
+function renderSlidePreview(preview) {
+  if (preview.source.kind === "pdf" && preview.source.pdfUrl) {
+    const pdfUrl = `${preview.source.pdfUrl}#page=${preview.pageNumber}&view=FitH&toolbar=0&navpanes=0`;
+    els.originalSlide.innerHTML = `<iframe title="Slide gốc trang ${preview.pageNumber}" src="${escapeHtml(pdfUrl)}"></iframe>`;
+  } else {
+    els.originalSlide.innerHTML = renderSlideMarkup({
+      title: preview.source.title,
+      subtitle: "Nội dung hiện tại",
+      bullets: preview.source.points.length ? preview.source.points : [preview.source.text],
+      callout: "",
+      theme: preview.source.theme,
+    });
+  }
+
+  els.generatedSlide.innerHTML = renderSlideMarkup(preview);
+  els.changeSummary.textContent = `Thay đổi chính: ${preview.changeSummary}`;
+  renderDraftStatus();
+}
+
+function renderSlideMarkup(slide) {
+  const bullets = (slide.bullets || []).map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("");
+  return `
+    <div class="slide-mock slide-theme-${escapeHtml(slide.theme || "blue")}">
+      <span class="slide-mock-kicker">VLearn · Slide đề xuất</span>
+      <h5>${escapeHtml(slide.title)}</h5>
+      ${slide.subtitle ? `<p class="slide-mock-subtitle">${escapeHtml(slide.subtitle)}</p>` : ""}
+      <ul>${bullets}</ul>
+      ${slide.callout ? `<div class="slide-mock-callout">${escapeHtml(slide.callout)}</div>` : ""}
+      <span class="slide-mock-page">${selectedPage}</span>
+    </div>
+  `;
+}
+
+function draftStorageKey() {
+  return `vlearn-slide-draft:${overview?.lessonId || "unknown"}:${selectedPage || 0}`;
+}
+
+function applyPreviewDraft() {
+  if (!currentPreview) return;
+  const draft = { ...currentPreview, status: "draft", appliedAt: new Date().toISOString() };
+  localStorage.setItem(draftStorageKey(), JSON.stringify(draft));
+  els.previewHint.textContent = "Đã lưu bản nháp. PDF gốc vẫn được giữ nguyên.";
+  renderDraftStatus();
+}
+
+function discardPreview() {
+  currentPreview = null;
+  els.previewBlock.hidden = true;
+  els.previewGrid.hidden = true;
+  els.previewHint.textContent = "";
+}
+
+function renderDraftStatus() {
+  if (!overview || selectedPage == null) {
+    els.draftStatus.textContent = "";
+    return;
+  }
+  const hasDraft = Boolean(localStorage.getItem(draftStorageKey()));
+  els.draftStatus.textContent = hasDraft ? "Đã có bản nháp" : "Chưa áp dụng";
+  els.draftStatus.classList.toggle("is-applied", hasDraft);
 }
 
 function escapeHtml(value) {

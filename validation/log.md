@@ -34,11 +34,13 @@ Mẹo: bật ghi âm (xin phép trước) rồi chép lại sau, sẽ nhanh và 
 
 | # | Tên | Vai / lớp | Ngày | Task được giao | Quan sát (họ làm gì, vướng ở đâu) | Quote nguyên văn | Mức nghiêm trọng |
 |---|---|---|---|---|---|---|---|
-| 1 | `<tên>` | `<học viên / TA / giảng viên>` | `<dd/mm>` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
-| 2 | | | | | | | |
-| 3 | | | | | | | |
-| 4 | | | | | | | |
-| 5 | | | | | | | |
+| 1 | Kim Duy Hưng | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
+| 2 | Nguyễn Hữu Kiên | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
+| 3 | Nguyễn Đức Thiện | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
+| 4 | Nguyễn Việt Thắng | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
+| 5 | Vũ Minh Đức | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `<cao / vừa / thấp>` |
+| 6 | Nguyễn Đình Phúc | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `thấp>` |
+| 7 | Nguyễn Thế Khải | `<học viên` | `31/7` | `<task>` | `<quan sát>` | `"<nguyên văn>"` | `vừa` |
 
 **Mức nghiêm trọng:** `cao` = chặn không dùng được · `vừa` = làm được nhưng khó chịu · `thấp` = góp ý thẩm mỹ.
 

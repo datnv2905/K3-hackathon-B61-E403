@@ -2,6 +2,8 @@ import { createSessionChip, requireRole } from "/auth.js";
 
 const STORAGE_PREFIX = "vlearn-tutor-session-v1";
 const MAX_PERSONALISED = 5;
+const INSTRUCTOR_QUESTION_COUNT = 2;
+const AI_SUGGESTION_COUNT = 3;
 const DUPLICATE_THRESHOLD = 0.7;
 const PDFJS_MODULE_URL = "/vendor/pdfjs/pdf.min.mjs";
 const PDFJS_WORKER_URL = "/vendor/pdfjs/pdf.worker.min.mjs";
@@ -43,6 +45,8 @@ const els = {
   finalOverlay: document.querySelector("#finalOverlay"),
   finalBody: document.querySelector("#finalBody"),
   closeFinalBtn: document.querySelector("#closeFinalBtn"),
+  celebrationOverlay: document.querySelector("#celebrationOverlay"),
+  closeCelebrationBtn: document.querySelector("#closeCelebrationBtn"),
   modelPill: document.querySelector("#modelPill"),
   mockBadge: document.querySelector("#mockBadge"),
   lessonTitle: document.querySelector("#lessonTitle"),
@@ -60,6 +64,7 @@ let state = null;
 let selection = null;
 let drag = null;
 let busy = false;
+let celebrationTimer = null;
 
 // PDF-mode-only state. pageTextItems maps pageNumber -> [{str,left,top,width,height}]
 // in CSS-pixel coordinates relative to that page's own rendered canvas, used for the
@@ -180,6 +185,7 @@ function bindEvents() {
   els.resetSessionBtn.addEventListener("click", resetSession);
   els.finalQuizBtn.addEventListener("click", openFinalQuiz);
   els.closeFinalBtn.addEventListener("click", () => (els.finalOverlay.hidden = true));
+  els.closeCelebrationBtn.addEventListener("click", hideCelebration);
   els.viewer.addEventListener("pointerup", captureTextSelection);
   els.toggleSidebarBtn?.addEventListener("click", () => togglePanel("sidebar"));
   els.toggleTutorBtn?.addEventListener("click", () => togglePanel("tutor"));
@@ -880,6 +886,7 @@ async function generateQuiz(message) {
 
   try {
     const data = await postJson("/api/tutor/quiz", {
+      lessonId: lesson.id,
       sourceAnswer: message.content,
       pageNumber: message.citation?.pageNumber || 0,
       questionCount: 2,
@@ -1144,15 +1151,19 @@ function buildPersonalisedSet() {
   return kept;
 }
 
-function openFinalQuiz() {
+async function openFinalQuiz() {
   if (!state.finalAttempt || state.finalAttempt.submittedAt) {
     const personalised = buildPersonalisedSet();
     state.finalAttempt = {
       startedAt: new Date().toISOString(),
       submittedAt: null,
-      base: (lesson.baseQuestions || []).map((question) => ({ ...question, section: "A" })),
+      base: (lesson.baseQuestions || [])
+        .slice(0, INSTRUCTOR_QUESTION_COUNT)
+        .map((question) => ({ ...question, section: "A" })),
       personalised: personalised.map((question) => ({ ...question, section: "B" })),
       responses: {},
+      currentIndex: 0,
+      aiSuggestionAttempted: personalised.length > 0,
     };
     saveState();
     trackEvent("final_quiz_started", {
@@ -1162,8 +1173,83 @@ function openFinalQuiz() {
   }
 
   els.finalOverlay.hidden = false;
+
+  // Migrate unfinished attempts created before the one-question flow and the
+  // two-instructor-question limit were introduced.
+  state.finalAttempt.base = state.finalAttempt.base.slice(0, INSTRUCTOR_QUESTION_COUNT);
+
+  if (!state.finalAttempt.personalised.length && !state.finalAttempt.aiSuggestionAttempted) {
+    state.finalAttempt.aiSuggestionAttempted = true;
+    saveState();
+    els.finalBody.innerHTML = "";
+    els.finalBody.appendChild(hint("AI đang đề xuất câu hỏi từ nội dung bài học…"));
+
+    state.finalAttempt.personalised = await buildAiSuggestionSet();
+    saveState();
+    trackEvent("final_quiz_ai_suggested", { count: state.finalAttempt.personalised.length });
+  }
+
   renderFinalQuiz();
   renderChat();
+}
+
+async function buildAiSuggestionSet() {
+  const tutorContext = state.messages
+    .filter((message) => message.role === "assistant" && message.content)
+    .slice(-3)
+    .map((message) => message.content)
+    .join("\n\n");
+  const lessonContext = (lesson.pages || [])
+    .slice(0, 6)
+    .map((page) => `${page.title || `Trang ${page.pageNumber}`}: ${page.text || ""}`)
+    .join("\n");
+  const sourceAnswer = (tutorContext || lessonContext).slice(0, 6000);
+
+  try {
+    const data = await postJson("/api/tutor/quiz", {
+      lessonId: lesson.id,
+      sourceAnswer,
+      pageNumber: 1,
+      questionCount: AI_SUGGESTION_COUNT,
+    });
+    return (data.questions || []).map((question, index) => ({
+      ...question,
+      id: `ai-suggestion-${question.id || index + 1}`,
+      section: "B",
+    }));
+  } catch (error) {
+    return buildOfflineAiSuggestions();
+  }
+}
+
+function buildOfflineAiSuggestions() {
+  const pages = (lesson.pages || [])
+    .filter((page) => page.text)
+    .slice(0, AI_SUGGESTION_COUNT)
+    .map((page) => ({
+      ...page,
+      answerLabel: page.title || `${page.text.slice(0, 72).trim()}…`,
+    }));
+  const titles = pages.map((page) => page.answerLabel);
+
+  return pages.map((page, index) => {
+    const distractors = titles.filter((title) => title !== page.answerLabel).slice(0, 2);
+    while (distractors.length < 2) distractors.push("Nội dung không được đề cập trong bài");
+    const options = [page.answerLabel, ...distractors];
+    const rotation = index % options.length;
+    const rotated = [...options.slice(rotation), ...options.slice(0, rotation)];
+
+    return {
+      id: `ai-offline-${page.pageNumber}`,
+      type: "mcq",
+      pageNumber: page.pageNumber,
+      prompt: `Trang ${page.pageNumber} tập trung giải thích nội dung nào?`,
+      options: rotated,
+      correctOptionIndex: rotated.indexOf(page.answerLabel),
+      explanation: page.text,
+      section: "B",
+    };
+  });
 }
 
 function renderFinalQuiz() {
@@ -1181,67 +1267,162 @@ function renderFinalQuiz() {
     return;
   }
 
-  appendSection("Phần A · Câu hỏi nền do giảng viên chuẩn bị", attempt.base);
-  appendSection(`Phần B · Câu hỏi cá nhân hoá từ micro quiz (${attempt.personalised.length})`, attempt.personalised);
+  attempt.currentIndex = Math.min(Math.max(attempt.currentIndex || 0, 0), all.length - 1);
+  const index = attempt.currentIndex;
+  const question = all[index];
+  const sectionQuestions = question.section === "A" ? attempt.base : attempt.personalised;
+  const sectionIndex = sectionQuestions.findIndex((entry) => finalKey(entry) === finalKey(question));
 
-  const submit = document.createElement("button");
-  submit.className = "final-btn";
-  submit.type = "button";
-  submit.style.margin = "0";
-  submit.textContent = "Nộp quiz tổng hợp";
-  submit.addEventListener("click", () => submitFinalQuiz(submit));
-  els.finalBody.appendChild(submit);
+  const sectionPicker = document.createElement("div");
+  sectionPicker.className = "final-section-picker";
+  sectionPicker.append(
+    finalSectionButton("Giảng viên", "A", question.section === "A", attempt.base.length === 0),
+    finalSectionButton("AI suggestion", "B", question.section === "B", attempt.personalised.length === 0)
+  );
+  els.finalBody.appendChild(sectionPicker);
 
-  function appendSection(title, questions) {
-    const heading = document.createElement("p");
-    heading.className = "final-section-title";
-    heading.textContent = title;
-    els.finalBody.appendChild(heading);
+  const progress = document.createElement("div");
+  progress.className = "final-progress";
+  progress.innerHTML = `
+    <div class="final-progress-copy"><strong>Câu ${index + 1}/${all.length}</strong><span>${Math.round(((index + 1) / all.length) * 100)}%</span></div>
+    <div class="final-progress-track"><span style="width: ${((index + 1) / all.length) * 100}%"></span></div>
+  `;
+  els.finalBody.appendChild(progress);
 
-    if (questions.length === 0) {
-      els.finalBody.appendChild(hint("Không có câu hỏi trong phần này."));
-      return;
-    }
+  const heading = document.createElement("p");
+  heading.className = `final-section-title section-${question.section.toLowerCase()}`;
+  heading.textContent = question.section === "A"
+    ? `Phần 1 · Của giảng viên · ${sectionIndex + 1}/${sectionQuestions.length}`
+    : `Phần 2 · AI suggestion · ${sectionIndex + 1}/${sectionQuestions.length}`;
+  els.finalBody.appendChild(heading);
 
-    questions.forEach((question, index) => {
-      const block = document.createElement("div");
-      block.className = "q-block";
-      const prompt = document.createElement("p");
-      prompt.className = "q-prompt";
-      prompt.textContent = `${index + 1}. ${question.prompt}`;
-      block.appendChild(prompt);
+  const block = document.createElement("div");
+  block.className = "q-block final-single-question";
+  const prompt = document.createElement("p");
+  prompt.className = "q-prompt";
+  prompt.textContent = question.prompt;
+  block.appendChild(prompt);
 
-      const key = finalKey(question);
-      if (question.type === "short_answer") {
-        const textarea = document.createElement("textarea");
-        textarea.placeholder = "Trả lời ngắn…";
-        textarea.value = attempt.responses[key]?.text || "";
-        textarea.addEventListener("input", () => {
-          attempt.responses[key] = { text: textarea.value };
-        });
-        const wrap = document.createElement("div");
-        wrap.className = "q-short";
-        wrap.appendChild(textarea);
-        block.appendChild(wrap);
-      } else {
-        question.options.forEach((option, optionIndex) => {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "q-option";
-          button.textContent = option;
-          // "selected", not "correct" — nothing is graded until submit.
-          if (attempt.responses[key]?.optionIndex === optionIndex) button.classList.add("selected");
-          button.addEventListener("click", () => {
-            attempt.responses[key] = { optionIndex };
-            saveState();
-            renderFinalQuiz();
-          });
-          block.appendChild(button);
-        });
-      }
-      els.finalBody.appendChild(block);
+  const key = finalKey(question);
+  if (question.type === "short_answer") {
+    const textarea = document.createElement("textarea");
+    textarea.placeholder = "Trả lời ngắn…";
+    textarea.value = attempt.responses[key]?.text || "";
+    textarea.addEventListener("input", () => {
+      attempt.responses[key] = { text: textarea.value };
+      saveState();
+    });
+    const wrap = document.createElement("div");
+    wrap.className = "q-short";
+    wrap.appendChild(textarea);
+    block.appendChild(wrap);
+
+    const convertButton = document.createElement("button");
+    convertButton.type = "button";
+    convertButton.className = "convert-to-mcq-btn";
+    convertButton.textContent = "Chuyển sang trắc nghiệm";
+    convertButton.addEventListener("click", () => convertFinalQuestionToMcq(question, convertButton));
+    block.appendChild(convertButton);
+  } else {
+    question.options.forEach((option, optionIndex) => {
+      const optionButton = document.createElement("button");
+      optionButton.type = "button";
+      optionButton.className = "q-option";
+      optionButton.textContent = option;
+      if (attempt.responses[key]?.optionIndex === optionIndex) optionButton.classList.add("selected");
+      optionButton.addEventListener("click", () => {
+        attempt.responses[key] = { optionIndex };
+        saveState();
+        renderFinalQuiz();
+      });
+      block.appendChild(optionButton);
     });
   }
+  els.finalBody.appendChild(block);
+
+  const navigation = document.createElement("div");
+  navigation.className = "final-navigation";
+  if (index > 0) navigation.appendChild(finalNavigationButton("Quay lại", () => moveFinalQuiz(-1), "secondary"));
+  navigation.appendChild(index === all.length - 1
+    ? finalNavigationButton("Hoàn thành bài", (event) => submitFinalQuiz(event.currentTarget))
+    : finalNavigationButton("Câu tiếp theo", () => moveFinalQuiz(1)));
+  els.finalBody.appendChild(navigation);
+}
+
+function finalSectionButton(label, section, active, disabled) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "final-section-button";
+  button.classList.toggle("is-active", active);
+  button.disabled = disabled;
+  button.textContent = label;
+  button.addEventListener("click", () => {
+    state.finalAttempt.currentIndex = section === "A" ? 0 : state.finalAttempt.base.length;
+    saveState();
+    renderFinalQuiz();
+  });
+  return button;
+}
+
+async function convertFinalQuestionToMcq(question, button) {
+  button.disabled = true;
+  button.textContent = "AI đang chuyển đổi…";
+
+  let converted;
+  try {
+    const data = await postJson("/api/tutor/quiz", {
+      lessonId: lesson.id,
+      sourceAnswer: `Chuyển chính xác câu tự luận sau thành câu trắc nghiệm, giữ nguyên kiến thức cần kiểm tra. Câu hỏi: ${question.prompt}. Đáp án đúng: ${question.referenceAnswer || question.explanation}`,
+      pageNumber: question.pageNumber || 1,
+      questionCount: 1,
+      forceMcq: true,
+    });
+    converted = data.questions?.[0];
+  } catch {
+    converted = buildFallbackMcq(question);
+  }
+
+  if (!converted || converted.type !== "mcq") converted = buildFallbackMcq(question);
+  const target = question.section === "A" ? state.finalAttempt.base : state.finalAttempt.personalised;
+  const targetIndex = target.findIndex((entry) => finalKey(entry) === finalKey(question));
+  target[targetIndex] = {
+    ...converted,
+    id: question.id,
+    section: question.section,
+    pageNumber: question.pageNumber,
+    prompt: question.prompt,
+    explanation: converted.explanation || question.explanation,
+  };
+  delete state.finalAttempt.responses[finalKey(question)];
+  saveState();
+  renderFinalQuiz();
+}
+
+function buildFallbackMcq(question) {
+  const correct = question.referenceAnswer || question.explanation || "Nội dung được trình bày trong bài học";
+  return {
+    type: "mcq",
+    prompt: question.prompt,
+    options: [correct, "Không thể kết luận từ nội dung bài học", "Tất cả các ý trên đều không đúng"],
+    correctOptionIndex: 0,
+    explanation: question.explanation,
+  };
+}
+
+function finalNavigationButton(label, onClick, variant = "primary") {
+  const button = document.createElement("button");
+  button.className = `final-nav-btn ${variant}`;
+  button.type = "button";
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function moveFinalQuiz(offset) {
+  state.finalAttempt.currentIndex += offset;
+  saveState();
+  renderFinalQuiz();
+  els.finalBody.scrollTop = 0;
 }
 
 async function submitFinalQuiz(button) {
@@ -1283,6 +1464,19 @@ async function submitFinalQuiz(button) {
   renderFinalQuiz();
   renderChat();
   trackEvent("final_quiz_submitted", { total: all.length, correct, score: Math.round((correct / all.length) * 100) });
+  if (correct / all.length > 0.5) showCelebration();
+}
+
+function showCelebration() {
+  clearTimeout(celebrationTimer);
+  els.celebrationOverlay.hidden = false;
+  celebrationTimer = setTimeout(hideCelebration, 3000);
+}
+
+function hideCelebration() {
+  clearTimeout(celebrationTimer);
+  celebrationTimer = null;
+  els.celebrationOverlay.hidden = true;
 }
 
 function renderFinalScore(attempt, all) {

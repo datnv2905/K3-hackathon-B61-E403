@@ -64,6 +64,7 @@ const routes = [
   ["GET", "/api/admin/overview", handleAdminOverview],
   ["GET", "/api/admin/pages/:pageNumber/questions", handleAdminPageQuestions],
   ["POST", "/api/admin/suggestions", handleAdminSuggestion],
+  ["POST", "/api/admin/slide-preview", handleAdminSlidePreview],
 ];
 
 // pageNumber is a path param, not a literal segment — match it manually alongside
@@ -367,10 +368,11 @@ async function handleTutorQuiz(req, res) {
 
   const lesson = getLesson(text(body.lessonId));
   const count = clamp(Number(body.questionCount) || 2, 1, 3);
+  const forceMcq = body.forceMcq === true;
   const pageNumber = Number(body.pageNumber) || 0;
   const page = lesson.pages.find((item) => item.pageNumber === pageNumber) || lesson.pages[0];
 
-  const json = await callModelJson(buildQuizPrompt({ sourceAnswer, count, page }));
+  const json = await callModelJson(buildQuizPrompt({ sourceAnswer, count, page, forceMcq }));
   sendJson(res, 200, normalizeQuiz(json, count, page.pageNumber));
 }
 
@@ -451,6 +453,32 @@ async function handleAdminSuggestion(req, res) {
 
   const json = await callModelJson(buildSuggestionPrompt({ lesson, page, overview }));
   sendJson(res, 200, normalizeSuggestion(json, page, overview));
+}
+
+async function handleAdminSlidePreview(req, res) {
+  const body = await readJsonBody(req);
+  const lessonId = text(body.lessonId) || DEFAULT_LESSON_ID;
+  const pageNumber = Number(body.pageNumber);
+  if (!Number.isInteger(pageNumber)) return sendJson(res, 400, { error: "pageNumber is required" });
+
+  const lesson = getLesson(lessonId);
+  const sourcePage = lesson.pages.find((entry) => entry.pageNumber === pageNumber);
+  if (!sourcePage) return sendJson(res, 404, { error: `No lesson page ${pageNumber}` });
+
+  const recommendation = text(body.recommendation);
+  if (!recommendation) return sendJson(res, 400, { error: "recommendation is required" });
+
+  const json = await callModelJson(
+    buildSlidePreviewPrompt({
+      lesson,
+      sourcePage,
+      recommendation,
+      insight: text(body.insight),
+      variation: Math.max(1, Number(body.variation) || 1),
+    })
+  );
+
+  sendJson(res, 200, normalizeSlidePreview(json, lesson, sourcePage, recommendation));
 }
 
 async function readEventsForLesson(lessonId) {
@@ -714,6 +742,61 @@ function normalizeSuggestion(json, page, overview) {
   };
 }
 
+function buildSlidePreviewPrompt({ lesson, sourcePage, recommendation, insight, variation }) {
+  return [
+    "You are redesigning one Vietnamese lecture slide as a concise HTML preview for an instructor.",
+    "Keep the meaning grounded in the source slide. Do not add facts that are absent from the source.",
+    "Apply the smart suggestion, improve scanability, and keep the result suitable for a 16:9 slide.",
+    `This is design variation ${variation}; vary the wording and emphasis while preserving meaning.`,
+    "Return 3-5 short bullets. Each bullet must fit on one line when possible.",
+    "The callout is one short takeaway, question, or concrete emphasis line.",
+    "Choose theme from: blue, teal, amber, violet.",
+    "Write in Vietnamese.",
+    "",
+    `Lesson: ${lesson.title}`,
+    `Page: ${sourcePage.pageNumber}`,
+    `Source slide content: ${pageCorpus(sourcePage)}`,
+    `Observed issue: ${insight || "Không có nhận định bổ sung."}`,
+    `Smart suggestion to apply: ${recommendation}`,
+    "",
+    "Reply with strict JSON only:",
+    '{"title":"...","subtitle":"...","bullets":["..."],"callout":"...","theme":"blue|teal|amber|violet","changeSummary":"..."}',
+  ].join("\n");
+}
+
+function normalizeSlidePreview(json, lesson, sourcePage, recommendation) {
+  const allowedThemes = new Set(["blue", "teal", "amber", "violet"]);
+  const rawBullets = Array.isArray(json.bullets) ? json.bullets.map(text).filter(Boolean).slice(0, 5) : [];
+  const sourcePoints = sourcePage.points?.map(text).filter(Boolean).slice(0, 4) || [];
+  const fallbackBullets = sourcePoints.length
+    ? sourcePoints
+    : sourcePage.text
+        .split(/[.!?]\s+/)
+        .map(text)
+        .filter(Boolean)
+        .slice(0, 4);
+
+  return {
+    lessonId: lesson.id,
+    pageNumber: sourcePage.pageNumber,
+    title: text(json.title) || sourcePage.title || `Trang ${sourcePage.pageNumber}`,
+    subtitle: text(json.subtitle),
+    bullets: rawBullets.length ? rawBullets : fallbackBullets,
+    callout: text(json.callout) || recommendation,
+    theme: allowedThemes.has(text(json.theme)) ? text(json.theme) : "blue",
+    changeSummary: text(json.changeSummary) || "Sắp xếp lại nội dung theo smart suggestion.",
+    source: {
+      kind: lesson.kind,
+      pdfUrl: lesson.kind === "pdf" ? lesson.pdfUrl : "",
+      title: sourcePage.title || `Trang ${sourcePage.pageNumber}`,
+      text: pageCorpus(sourcePage),
+      points: sourcePage.points || [],
+      theme: sourcePage.theme || "blue",
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 /* ── Retrieval ──────────────────────────────────────────────────────── */
 
 // Naive lexical retrieval: good enough to prove the citation contract, and it keeps
@@ -816,13 +899,15 @@ function buildVisualPrompt({ question, selectedRegion, retrieved }) {
   ].join("\n");
 }
 
-function buildQuizPrompt({ sourceAnswer, count, page }) {
+function buildQuizPrompt({ sourceAnswer, count, page, forceMcq = false }) {
   return [
     `Create a Vietnamese micro quiz of exactly ${count} question(s) that checks whether the learner understood the tutor answer below.`,
     "",
     "RULES:",
     "1. Every question must be answerable from the lesson page text alone.",
-    `2. Include at least one "mcq". You may include one "short_answer" if it fits.`,
+    forceMcq
+      ? `2. Every question MUST be an "mcq". Never return "short_answer".`
+      : `2. Include at least one "mcq". You may include one "short_answer" if it fits.`,
     "3. mcq: 3 options, exactly one correct, set correctOptionIndex (0-based).",
     "4. short_answer: supply a concise referenceAnswer instead of options.",
     "5. Keep every explanation under 2 sentences. Do not repeat the same fact twice.",

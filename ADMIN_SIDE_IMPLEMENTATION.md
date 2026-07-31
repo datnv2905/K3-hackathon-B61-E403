@@ -14,9 +14,9 @@ This maps to PRD §12 (Smart Suggestion Engine) and §13 (Admin Dashboard) — n
 
 Non-goals for this slice (the build must not violate them):
 
-1. No AI-generated diagram images (PRD §14) — the suggestion is text only: what's wrong and what to try, not a redrawn visual.
-2. No approve/regenerate/reject workflow (PRD §15) — admin only *views* suggestions in this slice, mirroring PRD §13.4's own scoping note ("Admin chỉ xem dữ liệu; chưa cần màn hình chỉnh sửa").
-3. No PDF export or version switching (PRD §16) — there is no concept of a "new version" in this slice.
+1. No AI-generated diagram images (PRD §14) — **a later additive prototype now generates a structured HTML/CSS slide preview**, not a redrawn bitmap/vector diagram.
+2. No persisted approve/regenerate/reject workflow (PRD §15) — **superseded in the UI only:** admin can create another preview, discard it, or apply it as a browser-local draft. There is still no server-side approval state.
+3. No PDF export or version switching (PRD §16) — applying a preview stores a local draft and never modifies the source PDF.
 4. No pixel-coordinate heatmap. ~~The learner app no longer has a "khoanh vùng" (region/rectangle) mode~~ — **superseded: region select came back**, this time cropping real pixels and sending them to a vision model (see `codebase/MOCKS.md`). The learner app now emits `selection_region` events carrying percentage coordinates, so the x/y data a real heatmap needs **is** accumulating. The admin screen still does not draw a spatial overlay — that remains unbuilt, and the per-page ranking table is still what stands in for it.
 5. ~~No admin authentication~~ — **superseded after the slice shipped.** A *mock* login was added: `/` now serves `login.html` with two hardcoded demo accounts (`admin` → `/admin.html`, `hocvien` → `/index.html`), role kept in `sessionStorage`. This is a **navigation gate for the demo, not access control** — passwords are constants in client-side JS and printed on the login screen, and `/api/admin/*` still answers any caller with no token. Real authentication (registration, hashed passwords, server-side sessions, per-route authorization) remains out of scope — see "Do Not Build Yet" and `codebase/MOCKS.md`. Rationale: demoing the instructor and learner views as two distinct roles reads far better than swapping URLs by hand, and `sessionStorage` (per-tab) lets both be open side by side.
 

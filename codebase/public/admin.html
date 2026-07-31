@@ -89,6 +89,33 @@
           <p class="hint" id="suggestionHint"></p>
           <article class="admin-suggestion-card" id="suggestionCard" hidden></article>
         </section>
+
+        <section class="admin-card admin-preview-block" id="previewBlock" hidden>
+          <div class="admin-suggestion-head">
+            <div>
+              <h3>Slide mẫu theo suggestion</h3>
+              <p class="hint">Bản xem trước HTML; PDF gốc không bị thay đổi.</p>
+            </div>
+            <span class="admin-draft-status" id="draftStatus"></span>
+          </div>
+          <p class="hint" id="previewHint"></p>
+          <div class="admin-preview-grid" id="previewGrid" hidden>
+            <article class="admin-preview-pane">
+              <h4>Slide gốc</h4>
+              <div class="admin-original-slide" id="originalSlide"></div>
+            </article>
+            <article class="admin-preview-pane">
+              <h4>Slide đề xuất</h4>
+              <div class="admin-generated-slide" id="generatedSlide"></div>
+            </article>
+          </div>
+          <p class="admin-change-summary" id="changeSummary"></p>
+          <div class="admin-preview-actions">
+            <button class="ghost-btn" id="discardPreviewBtn" type="button">Bỏ qua</button>
+            <button class="ghost-btn" id="regeneratePreviewBtn" type="button">Tạo lại</button>
+            <button class="final-btn" id="applyPreviewBtn" type="button">Áp dụng bản nháp</button>
+          </div>
+        </section>
       </section>
     </main>
 

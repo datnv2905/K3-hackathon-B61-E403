@@ -750,6 +750,8 @@ function buildSlidePreviewPrompt({ lesson, sourcePage, recommendation, insight, 
     `This is design variation ${variation}; vary the wording and emphasis while preserving meaning.`,
     "Return 3-5 short bullets. Each bullet must fit on one line when possible.",
     "The callout is one short takeaway, question, or concrete emphasis line.",
+    "Also propose one simple explanatory diagram. Choose type from: flow, hierarchy, compare, cycle, concept.",
+    "The diagram must contain 2-5 short nodes grounded in the source. Use compare for two alternatives, hierarchy for nested concepts, flow/cycle for sequences, and concept otherwise.",
     "Choose theme from: blue, teal, amber, violet.",
     "Write in Vietnamese.",
     "",
@@ -760,12 +762,13 @@ function buildSlidePreviewPrompt({ lesson, sourcePage, recommendation, insight, 
     `Smart suggestion to apply: ${recommendation}`,
     "",
     "Reply with strict JSON only:",
-    '{"title":"...","subtitle":"...","bullets":["..."],"callout":"...","theme":"blue|teal|amber|violet","changeSummary":"..."}',
+    '{"title":"...","subtitle":"...","bullets":["..."],"callout":"...","theme":"blue|teal|amber|violet","diagram":{"type":"flow|hierarchy|compare|cycle|concept","title":"...","nodes":["...","..."]},"changeSummary":"..."}',
   ].join("\n");
 }
 
 function normalizeSlidePreview(json, lesson, sourcePage, recommendation) {
   const allowedThemes = new Set(["blue", "teal", "amber", "violet"]);
+  const allowedDiagramTypes = new Set(["flow", "hierarchy", "compare", "cycle", "concept"]);
   const rawBullets = Array.isArray(json.bullets) ? json.bullets.map(text).filter(Boolean).slice(0, 5) : [];
   const sourcePoints = sourcePage.points?.map(text).filter(Boolean).slice(0, 4) || [];
   const fallbackBullets = sourcePoints.length
@@ -784,6 +787,13 @@ function normalizeSlidePreview(json, lesson, sourcePage, recommendation) {
     bullets: rawBullets.length ? rawBullets : fallbackBullets,
     callout: text(json.callout) || recommendation,
     theme: allowedThemes.has(text(json.theme)) ? text(json.theme) : "blue",
+    diagram: {
+      type: allowedDiagramTypes.has(text(json.diagram?.type)) ? text(json.diagram.type) : "concept",
+      title: text(json.diagram?.title) || "Ý chính",
+      nodes: Array.isArray(json.diagram?.nodes)
+        ? json.diagram.nodes.map(text).filter(Boolean).slice(0, 5)
+        : rawBullets.slice(0, 3),
+    },
     changeSummary: text(json.changeSummary) || "Sắp xếp lại nội dung theo smart suggestion.",
     source: {
       kind: lesson.kind,

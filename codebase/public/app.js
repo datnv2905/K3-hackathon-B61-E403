@@ -1470,7 +1470,7 @@ async function submitFinalQuiz(button) {
 function showCelebration() {
   clearTimeout(celebrationTimer);
   els.celebrationOverlay.hidden = false;
-  celebrationTimer = setTimeout(hideCelebration, 3000);
+  celebrationTimer = setTimeout(hideCelebration, 1700);
 }
 
 function hideCelebration() {

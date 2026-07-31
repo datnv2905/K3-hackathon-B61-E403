@@ -26,6 +26,12 @@ const els = {
   discardPreviewBtn: document.querySelector("#discardPreviewBtn"),
   regeneratePreviewBtn: document.querySelector("#regeneratePreviewBtn"),
   applyPreviewBtn: document.querySelector("#applyPreviewBtn"),
+  zoomOriginalBtn: document.querySelector("#zoomOriginalBtn"),
+  zoomGeneratedBtn: document.querySelector("#zoomGeneratedBtn"),
+  slideZoomDialog: document.querySelector("#slideZoomDialog"),
+  slideZoomTitle: document.querySelector("#slideZoomTitle"),
+  slideZoomCanvas: document.querySelector("#slideZoomCanvas"),
+  closeZoomBtn: document.querySelector("#closeZoomBtn"),
 };
 
 let lessons = [];
@@ -109,6 +115,12 @@ function bindEvents() {
   els.discardPreviewBtn.addEventListener("click", discardPreview);
   els.regeneratePreviewBtn.addEventListener("click", generateSlidePreview);
   els.applyPreviewBtn.addEventListener("click", applyPreviewDraft);
+  els.zoomOriginalBtn.addEventListener("click", () => openSlideZoom("original"));
+  els.zoomGeneratedBtn.addEventListener("click", () => openSlideZoom("generated"));
+  els.closeZoomBtn.addEventListener("click", closeSlideZoom);
+  els.slideZoomDialog.addEventListener("click", (event) => {
+    if (event.target === els.slideZoomDialog) closeSlideZoom();
+  });
   els.pageTable.querySelectorAll("th[data-sort]").forEach((th) => {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
@@ -361,17 +373,107 @@ function renderSlidePreview(preview) {
 }
 
 function renderSlideMarkup(slide) {
-  const bullets = (slide.bullets || []).map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("");
+  const bulletItems = slide.bullets || [];
+  const bullets = bulletItems.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("");
+  const densityClass = bulletItems.length >= 5 ? " slide-density-high" : "";
   return `
-    <div class="slide-mock slide-theme-${escapeHtml(slide.theme || "blue")}">
+    <div class="slide-mock slide-theme-${escapeHtml(slide.theme || "blue")}${densityClass}">
       <span class="slide-mock-kicker">VLearn · Slide đề xuất</span>
-      <h5>${escapeHtml(slide.title)}</h5>
-      ${slide.subtitle ? `<p class="slide-mock-subtitle">${escapeHtml(slide.subtitle)}</p>` : ""}
-      <ul>${bullets}</ul>
-      ${slide.callout ? `<div class="slide-mock-callout">${escapeHtml(slide.callout)}</div>` : ""}
+      <div class="slide-mock-layout">
+        <div class="slide-mock-content">
+          <h5>${escapeHtml(slide.title)}</h5>
+          ${slide.subtitle ? `<p class="slide-mock-subtitle">${escapeHtml(slide.subtitle)}</p>` : ""}
+          <ul>${bullets}</ul>
+          ${slide.callout ? `<div class="slide-mock-callout">${escapeHtml(slide.callout)}</div>` : ""}
+        </div>
+        ${renderDiagram(slide.diagram)}
+      </div>
       <span class="slide-mock-page">${selectedPage}</span>
     </div>
   `;
+}
+
+function renderDiagram(diagram) {
+  const nodes = diagram?.nodes?.filter(Boolean).slice(0, 5) || [];
+  if (nodes.length < 2) return "";
+  const type = ["flow", "hierarchy", "compare", "cycle", "concept"].includes(diagram.type)
+    ? diagram.type
+    : "concept";
+  const positions = diagramPositions(type, nodes.length);
+  const connectors = positions
+    .slice(0, -1)
+    .map((position, index) => {
+      const next = positions[index + 1];
+      return `<path d="M ${position.x} ${position.y} L ${next.x} ${next.y}" />`;
+    })
+    .join("");
+  const cards = nodes
+    .map((node, index) => {
+      const { x, y } = positions[index];
+      return `
+        <g class="diagram-node">
+          <rect x="${x - 34}" y="${y - 15}" width="68" height="30" rx="9"></rect>
+          <foreignObject x="${x - 31}" y="${y - 12}" width="62" height="24">
+            <div class="diagram-node-label">${escapeHtml(shortDiagramLabel(node))}</div>
+          </foreignObject>
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <figure class="slide-diagram diagram-${type}">
+      <figcaption>${escapeHtml(diagram.title || "Minh họa")}</figcaption>
+      <svg viewBox="0 0 240 170" role="img" aria-label="${escapeHtml(diagram.title || "Minh họa nội dung slide")}">
+        <g class="diagram-connectors">${connectors}</g>
+        ${cards}
+      </svg>
+    </figure>
+  `;
+}
+
+function shortDiagramLabel(value) {
+  const label = String(value || "").replace(/\s+/g, " ").trim();
+  return label.length > 34 ? `${label.slice(0, 32).trim()}…` : label;
+}
+
+function diagramPositions(type, count) {
+  if (type === "compare") return count === 2 ? [{ x: 62, y: 86 }, { x: 178, y: 86 }] : spreadPositions(count, 32, 208, 86);
+  if (type === "hierarchy") return Array.from({ length: count }, (_, index) => ({ x: 120, y: 28 + index * (118 / Math.max(count - 1, 1)) }));
+  if (type === "cycle") {
+    return Array.from({ length: count }, (_, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+      return { x: 120 + Math.cos(angle) * 67, y: 86 + Math.sin(angle) * 58 };
+    });
+  }
+  if (type === "concept") {
+    const satellites = spreadPositions(count - 1, 42, 198, 126);
+    return [{ x: 120, y: 48 }, ...satellites];
+  }
+  if (count > 3) return Array.from({ length: count }, (_, index) => ({ x: 120, y: 28 + index * (118 / Math.max(count - 1, 1)) }));
+  return spreadPositions(count, 42, 198, 86);
+}
+
+function spreadPositions(count, start, end, y) {
+  return Array.from({ length: count }, (_, index) => ({
+    x: count === 1 ? (start + end) / 2 : start + (index * (end - start)) / (count - 1),
+    y,
+  }));
+}
+
+function openSlideZoom(kind) {
+  if (!currentPreview) return;
+  const source = kind === "original" ? els.originalSlide : els.generatedSlide;
+  els.slideZoomTitle.textContent = kind === "original" ? `Slide gốc · trang ${selectedPage}` : `Slide đề xuất · trang ${selectedPage}`;
+  els.slideZoomCanvas.innerHTML = source.innerHTML;
+  els.slideZoomCanvas.classList.toggle("is-original", kind === "original");
+  els.slideZoomCanvas.classList.toggle("is-generated", kind === "generated");
+  els.slideZoomDialog.showModal();
+}
+
+function closeSlideZoom() {
+  if (els.slideZoomDialog.open) els.slideZoomDialog.close();
+  els.slideZoomCanvas.innerHTML = "";
 }
 
 function draftStorageKey() {

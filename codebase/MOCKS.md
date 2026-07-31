@@ -18,7 +18,7 @@ Bảng này là bản khai báo trung thực theo R5 và vibe-coding rule. Nếu
 | Rating + opt-out | Gắn đúng micro quiz phát sinh ra nó (không phải quiz mới nhất). Hai hành động độc lập, đúng PRD §8.6. |
 | Quiz tổng hợp | Ghép Phần A + Phần B thật: ưu tiên câu trả lời sai → câu chưa làm → còn lại; loại câu trùng bằng độ trùng token ≥0.7; giới hạn 5 câu cá nhân hoá; khoá danh sách khi đã bắt đầu. |
 | **Admin: Smart Suggestion Engine** | `POST /api/admin/suggestions` → Gemini hoặc Claude. Server tự tính lại `PageAggregate` của trang đó từ `events.jsonl` (không tin số client gửi lên), chỉ đưa các con số đã tổng hợp + danh sách câu hỏi thường gặp vào prompt. Model không được bịa số; nếu trang chưa đủ tín hiệu (`questionCount < 2 && highlightCount < 2`), server từ chối gọi model và trả `422`. |
-| **Admin: tạo slide mẫu** | `POST /api/admin/slide-preview` → Gemini hoặc Claude. Model nhận text trang nguồn cùng insight/recommendation rồi trả cấu trúc slide mới gồm tiêu đề, bullet, callout, theme và tóm tắt thay đổi. UI dựng preview HTML 16:9 và đặt cạnh slide gốc. |
+| **Admin: tạo slide mẫu** | `POST /api/admin/slide-preview` → Gemini hoặc Claude. Model nhận text trang nguồn cùng insight/recommendation rồi trả cấu trúc slide mới gồm tiêu đề, bullet, callout, theme, diagram và tóm tắt thay đổi. UI dựng preview HTML 16:9 có sơ đồ SVG, đặt cạnh slide gốc; cả hai có thể mở modal phóng to. |
 | **Admin: tổng hợp per-page** | `GET /api/admin/overview`, `GET /api/admin/pages/:pageNumber/questions` — đọc và gộp `codebase/var/events.jsonl` theo `lessonId` rồi `pageNumber` mỗi lần gọi, không cache, không hardcode số nào. |
 
 ## Mock hoặc giới hạn — biết trước để không nói quá trong demo
@@ -41,7 +41,7 @@ Bảng này là bản khai báo trung thực theo R5 và vibe-coding rule. Nếu
 | **Heatmap ở admin** | Không phải overlay toạ độ x/y — Bảng xếp hạng theo trang (câu hỏi, bôi đen, tỷ lệ sai) đóng vai trò heatmap cho bản này. **Cập nhật:** khoanh vùng đã quay lại và event `selection_region` có ghi toạ độ phần trăm, nên dữ liệu cho heatmap toạ độ thật theo PRD §13.3 **đã bắt đầu tích luỹ** — nhưng admin vẫn chưa vẽ overlay, vẫn là bảng xếp hạng. |
 | **Common questions** | Gộp theo chuỗi giống hệt nhau (exact-string), không phải clustering ngữ nghĩa thật. |
 | **Admin: câu hỏi từng trang** | Chỉ tính được cho các câu hỏi gửi kèm text (`ask_question` event) — log cũ trước khi field này được thêm sẽ không có, không backfill. |
-| **Áp dụng slide mẫu** | Chỉ lưu một **bản nháp trong `localStorage`** theo bài giảng + số trang. Không ghi đè PDF, không sửa file nguồn và chưa xuất được PDF phiên bản mới. Preview là HTML/CSS, không phải ảnh/diagram do AI sinh. |
+| **Áp dụng slide mẫu** | Chỉ lưu một **bản nháp trong `localStorage`** theo bài giảng + số trang. Không ghi đè PDF, không sửa file nguồn và chưa xuất được PDF phiên bản mới. Minh họa là SVG dựng từ diagram có cấu trúc do AI đề xuất, không phải ảnh raster/diagram bitmap do model ảnh sinh. |
 
 ## Không build trong bản này
 

@@ -101,11 +101,17 @@
           <p class="hint" id="previewHint"></p>
           <div class="admin-preview-grid" id="previewGrid" hidden>
             <article class="admin-preview-pane">
-              <h4>Slide gốc</h4>
+              <div class="admin-preview-pane-head">
+                <h4>Slide gốc</h4>
+                <button class="admin-zoom-btn" id="zoomOriginalBtn" type="button" aria-label="Phóng to slide gốc">⛶ Phóng to</button>
+              </div>
               <div class="admin-original-slide" id="originalSlide"></div>
             </article>
             <article class="admin-preview-pane">
-              <h4>Slide đề xuất</h4>
+              <div class="admin-preview-pane-head">
+                <h4>Slide đề xuất</h4>
+                <button class="admin-zoom-btn" id="zoomGeneratedBtn" type="button" aria-label="Phóng to slide đề xuất">⛶ Phóng to</button>
+              </div>
               <div class="admin-generated-slide" id="generatedSlide"></div>
             </article>
           </div>
@@ -118,6 +124,19 @@
         </section>
       </section>
     </main>
+
+    <dialog class="slide-zoom-dialog" id="slideZoomDialog">
+      <div class="slide-zoom-shell">
+        <header class="slide-zoom-head">
+          <div>
+            <span class="slide-zoom-kicker">Xem chi tiết</span>
+            <h2 id="slideZoomTitle">Slide</h2>
+          </div>
+          <button class="admin-zoom-close" id="closeZoomBtn" type="button" aria-label="Đóng bản phóng to">×</button>
+        </header>
+        <div class="slide-zoom-canvas" id="slideZoomCanvas"></div>
+      </div>
+    </dialog>
 
     <script src="/admin.js" type="module"></script>
   </body>

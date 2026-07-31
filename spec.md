@@ -333,36 +333,42 @@ Tính năng gợi ý giảng viên nên sửa trang nào được đo bằng b�
 
 ## Phân công có tên
 
-| Mảng | Người phụ trách | Việc cụ thể (theo PRD) | Ghi trong repo |
-|---|---|---|---|
-| **Spec & Evidence** |  | Viết spec.md §1-§3, tổng hợp JTBD, dẫn evidence pain của người học (không hiểu đoạn/diagram cụ thể, quiz cuối không phản ánh chỗ yếu cá nhân — mục 2.1 PRD) và của giảng viên (không biết vùng nào gây khó hiểu — mục 2.2) | `spec.md`, `evidence/` |
-| **Prompt & AI logic** | *Trần Nguyễn Thế Nhật* | Thiết kế prompt cho 2 quyết định AI trung tâm: (1) trả lời có trích dẫn từ context khoanh/highlight (FR-05, FR-06, AC-01/02), (2) sinh micro quiz 1-3 câu bám ngữ cảnh (FR-08, FR-09); viết golden set §7 | `prompts/`, `eval/golden-set.csv` |
-| **Code — Frontend** | *[Tên C]* | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
-| **Code — Backend/AI call** | *[Tên D]* | Chunk theo slide + lưu metadata số slide (rủi ro 20.3), gọi AI thật cho câu trả lời + micro quiz, tracking tương tác (FR-19, FR-20) | `codebase/backend/` |
-| **Demo & Validation** | *[Tên E]* | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
+Nhóm 6 người. Cột **Bằng chứng** trỏ về commit/file thật trong repo để mỗi người tự đối chiếu phần của mình — CP5 hỏi ngẫu nhiên, ai không giải thích được phần mang tên mình thì mất điểm phần đó.
 
-*Nhóm 4 người: gộp Spec&Evidence với Demo&Validation vào một người; nhóm 3 người: gộp thêm Frontend/Backend nếu cùng 1 người dev full-stack — miễn mỗi phần vẫn có tên rõ, ai cũng giải thích được phần của mình (CP5 kiểm ngẫu nhiên).*
+| Mảng | Người phụ trách | Mã HV | Việc cụ thể | Bằng chứng trong repo |
+|---|---|---|---|---|
+| **Spec & Evidence** | Lê Hồng Đức | 2A202601313 | Viết `spec.md` §1–§6: JTBD, problem statement, bảng impact, 4 lớp chỗ khó, 4 đường trải nghiệm | 9 commit vào `spec.md` (nhánh `duclh`) |
+| **Prompt & AI logic + Kiểm thử** | Nguyễn Kim Trung Đức | 2A202601325 | Bộ golden set đầu tiên và cấu trúc test case | `eval/golden_test_set.json` (nhánh `nguyenkimtrungduc`) |
+| **Code — Frontend** | Phong | 2A202601077 | PRD sản phẩm; slide viewer cuộn, bôi đen chọn đoạn, panel chatbot hiển thị nguồn | `PRD_slide_ai_learning_system.md`, `codebase/public/index.html`, `app.js`, `styles.css` |
+| **Code — Backend / AI call** | Trần Nguyễn Thế Nhật | 2A202601155 | Lời gọi AI + đối chiếu trích dẫn (`verifyQuote`), lớp chọn provider Gemini/Claude, màn giảng viên, luồng khoanh vùng ảnh, hai bộ eval | `codebase/server.js`, `admin.js`, `auth.js`, `eval/run-tutor-eval.mjs`, `eval/run-suggestion-eval.mjs` |
+| **Demo & Validation** | Toàn | 2A202601493 | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), dry run bấm giờ, slide 6 trang | `demo-slides.pdf` — *chưa có* |
+| **Demo & Validation** | Đạt | 2A202601969 | Tổ chức vòng user test CP5, ghi feedback log nguyên văn, tổng hợp thay đổi vào Changelog | `validation/log.md` — *khung đã có, chưa có dữ liệu* |
+
+> **Hai dòng cuối chưa có bằng chứng trong repo.** Toàn và Đạt hiện chưa có commit nào, nên hai
+> dòng này là **phân công đi tới**, không phải mô tả việc đã làm. Muốn ăn điểm thì phải thực sự
+> làm và để lại dấu vết: `demo-slides.pdf` và `validation/log.md` có dữ liệu thật.
+>
+> Bốn dòng trên đối chiếu được ngay bằng `git log --author=<tên>`.
 
 ## Willing users (≥3 tên) + kế hoạch vòng validation CP5
 
-**Willing users đã xin đồng ý dùng thử trước demo:**
+**Chưa có tên nào.** Cần ≥3 người **ngoài nhóm** đã đồng ý thử trước demo, và R6 cần feedback từ ≥5 người.
 
 | # | Tên | Vai | Vì sao phù hợp |
 |---|---|---|---|
-| 1 | *[Tên user 1]* | Học viên đang học bằng slide PDF thật (đối tượng đúng của mục 2.1) | Trải nghiệm đúng luồng highlight/khoanh vùng → hỏi AI |
-| 2 | *[Tên user 2]* | Học viên khác lớp/zone — dùng làm người thử chéo, tránh bias vì đã biết sản phẩm | Góc nhìn người lần đầu thấy giao diện |
-| 3 | *[Tên user 3 — giảng viên/TA]* | Đóng vai Giảng viên/Admin (mục 2.2, 5.2) | Test riêng luồng dashboard + smart suggestion + duyệt diagram, luồng người học không phủ được |
+| 1 | *Nguyễn Hữu Kiên* | Học viên đang học bằng slide PDF thật | Trải nghiệm đúng luồng bôi đen / khoanh hình → hỏi AI |
+| 2 | *Nguyễn Đình Phúc* | Học viên khác lớp hoặc khác zone | Góc nhìn người lần đầu thấy giao diện, tránh bias vì đã biết sản phẩm |
+| 3 | *Nguyễn Thế Khải* | Giảng viên / TA | Test riêng luồng bảng theo dõi lớp + smart suggestion — luồng học viên không phủ được |
 
-**Kế hoạch phiên validation (10 phút/người, theo guide §4.2):**
+**Kế hoạch phiên (10 phút/người)** — chi tiết đầy đủ trong `validation/log.md`:
 
-1. Giao task thật: *"Hãy dùng slide này, khoanh một đoạn bạn thấy khó hiểu và hỏi trợ lý"* (với user 1, 2) hoặc *"Hãy xem dashboard và thử duyệt một đề xuất diagram mới"* (với user 3) → quan sát im lặng, không gợi ý.
-2. Hỏi đúng 3 câu:
-   - *"Điều gì khó hiểu hoặc khó chịu nhất?"*
-   - *"Câu trả lời/nguồn trích dẫn này bạn có tin không — vì sao?"*
-   - *"Bạn có dùng thật không — vì sao / vì sao chưa?"*
-3. Log nguyên văn, không diễn giải hộ.
+1. Giao task thật rồi **im lặng quan sát**, không hướng dẫn: *"Mở bài Day 1, tìm một đoạn bạn thấy khó hiểu rồi hỏi trợ lý về đúng đoạn đó."*
+2. Hỏi đúng 3 câu: điều gì khó chịu nhất · có tin câu trả lời và nguồn trích dẫn không, vì sao · có dùng thật không, vì sao chưa.
+3. **Chép nguyên văn**, kể cả khi lủng củng hoặc chê. Không diễn giải hộ.
 
-**Người log:** *[Tên E]* — ghi vào bảng `validation/log.md` theo cột: người thử · task · quan sát · quote nguyên văn · mức nghiêm trọng. Tổng hợp 1-2 thay đổi làm trước demo → đưa vào Changelog §9.
+**Người log:** Đạt (2A202601969) — ghi vào `validation/log.md`, tổng hợp 1–2 thay đổi làm trước demo rồi đưa sang §9.
+
+**Chuẩn bị sẵn để phiên chạy nhanh:** `npm run dev:claude`, mở `http://localhost:3000`, đăng nhập `hocvien / hocvien123` (tài khoản in sẵn trên màn đăng nhập).
 
 ## Multi-prototype: trục khác biệt của ≥2 phương án + lý do chọn
 

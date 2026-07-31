@@ -184,13 +184,6 @@ Khi câu trả lời liên quan kiến thức cốt lõi của bài, AI dùng ng
 
 ---
 
-
-# Mẫu §7. Kiểm thử — minh hoạ trên ví dụ Hướng B
-
-> Đây là **ví dụ tham khảo**, không phải số liệu thật. Lát cắt minh hoạ: *"Học viên hỏi trợ lý Discord về deadline/link nộp bài · trợ lý tra kênh #thong-bao-chinh-thuc · quyết định AI: trả lời kèm trích dẫn nguồn hoặc từ chối & chuyển TA · kết quả: học viên nhận đúng thông tin, không bao giờ nhận thông tin bịa."* Nhóm copy cấu trúc này rồi thay bằng dữ liệu/case thật của lát cắt mình.
-
----
-
 ## §7. Kiểm thử
 
 ### Chiều chất lượng + định nghĩa kiểm chứng được
@@ -268,13 +261,11 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 | Mảng | Người phụ trách | Việc cụ thể (theo PRD) | Ghi trong repo |
 |---|---|---|---|
-| **Spec & Evidence** | *[Tên A]* | Viết spec.md §1-§3, tổng hợp JTBD, dẫn evidence pain của người học (không hiểu đoạn/diagram cụ thể, quiz cuối không phản ánh chỗ yếu cá nhân — mục 2.1 PRD) và của giảng viên (không biết vùng nào gây khó hiểu — mục 2.2) | `spec.md`, `evidence/` |
-| **Prompt & AI logic** | *[Tên B]* | Thiết kế prompt cho 2 quyết định AI trung tâm: (1) trả lời có trích dẫn từ context khoanh/highlight (FR-05, FR-06, AC-01/02), (2) sinh micro quiz 1-3 câu bám ngữ cảnh (FR-08, FR-09); viết golden set §7 | `prompts/`, `eval/golden-set.csv` |
-| **Code — Frontend** | *[Tên C]* | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
-| **Code — Backend/AI call** | *[Tên D]* | Chunk theo slide + lưu metadata số slide (rủi ro 20.3), gọi AI thật cho câu trả lời + micro quiz, tracking tương tác (FR-19, FR-20) | `codebase/backend/` |
-| **Demo & Validation** | *[Tên E]* | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
-
-*Nhóm 4 người: gộp Spec&Evidence với Demo&Validation vào một người; nhóm 3 người: gộp thêm Frontend/Backend nếu cùng 1 người dev full-stack — miễn mỗi phần vẫn có tên rõ, ai cũng giải thích được phần của mình (CP5 kiểm ngẫu nhiên).*
+| **Spec & Evidence** | Trần Nguyễn Thế Nhật, Nguyễn Trọng Toàn | Viết spec.md §1-§3, tổng hợp JTBD, dẫn evidence pain của người học (không hiểu đoạn/diagram cụ thể, quiz cuối không phản ánh chỗ yếu cá nhân — mục 2.1 PRD) và của giảng viên (không biết vùng nào gây khó hiểu — mục 2.2) | `spec.md`, `evidence/` |
+| **Prompt & AI logic** | Nguyễn Kim Trung Đức | Thiết kế prompt cho 2 quyết định AI trung tâm: (1) trả lời có trích dẫn từ context khoanh/highlight (FR-05, FR-06, AC-01/02), (2) sinh micro quiz 1-3 câu bám ngữ cảnh (FR-08, FR-09); viết golden set §7 | `prompts/`, `eval/golden-set.csv` |
+| **Code — Frontend** | Nguyễn Văn Đạt  | Slide viewer dạng cuộn (FR-01), text selection + pencil/rectangle selection (FR-03, FR-04), panel chatbot hiển thị nguồn (mục 6.1) | `codebase/frontend/` |
+| **Code — Backend/AI call** | Hoàng Nguyễn Phong | Chunk theo slide + lưu metadata số slide (rủi ro 20.3), gọi AI thật cho câu trả lời + micro quiz, tracking tương tác (FR-19, FR-20) | `codebase/backend/` |
+| **Demo & Validation** | Lê Hồng Đức | Kịch bản demo 5 phút (happy path + 1 case chỗ khó live), log vòng validation CP5, dry run bấm giờ | `validation/`, `demo-slides.pdf` |
 
 ## Willing users (≥3 tên) + kế hoạch vòng validation CP5
 
@@ -282,9 +273,9 @@ Cơ cấu theo guide §2.6: ≥2 case/lớp chỗ khó (4 lớp) + 8–10 case t
 
 | # | Tên | Vai | Vì sao phù hợp |
 |---|---|---|---|
-| 1 | *[Tên user 1]* | Học viên đang học bằng slide PDF thật (đối tượng đúng của mục 2.1) | Trải nghiệm đúng luồng highlight/khoanh vùng → hỏi AI |
-| 2 | *[Tên user 2]* | Học viên khác lớp/zone — dùng làm người thử chéo, tránh bias vì đã biết sản phẩm | Góc nhìn người lần đầu thấy giao diện |
-| 3 | *[Tên user 3 — giảng viên/TA]* | Đóng vai Giảng viên/Admin (mục 2.2, 5.2) | Test riêng luồng dashboard + smart suggestion + duyệt diagram, luồng người học không phủ được |
+| 1 | Nguyễn Hữu Kiên | Học viên đang học bằng slide PDF thật (đối tượng đúng của mục 2.1) | Trải nghiệm đúng luồng highlight/khoanh vùng → hỏi AI |
+| 2 | Nguyễn Đức Thiện | Học viên khác lớp/zone — dùng làm người thử chéo, tránh bias vì đã biết sản phẩm | Góc nhìn người lần đầu thấy giao diện |
+| 3 | Nguyễn Việt Thắng | Đóng vai Giảng viên/Admin (mục 2.2, 5.2) | Test riêng luồng dashboard + smart suggestion + duyệt diagram, luồng người học không phủ được |
 
 **Kế hoạch phiên validation (10 phút/người, theo guide §4.2):**
 

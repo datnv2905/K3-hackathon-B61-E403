@@ -115,22 +115,39 @@ sinh viên chưa hiểu rõ bài bôi đen/khoanh vùng phần đó rồi AI l�
 
 ### §4b. Nguyên tắc đã áp dụng (≥4 — HAX/PAIR)
 
-1. Grounding – Trả lời có căn cứ, không suy diễn ngoài phạm vi tài liệu
+Mỗi nguyên tắc dưới đây trỏ vào **một chỗ cụ thể trong code đang chạy**, kèm cách tự kiểm lại. Không nguyên tắc nào chỉ nằm trên giấy.
 
-Đây chính là nguyên tắc được thể hiện rõ nhất trong mục 10.3 của PRD. Chatbot chỉ được phép trả lời dựa trên nội dung PDF và Markdown của bài giảng (mục 10.1), tuyệt đối không dùng kiến thức bên ngoài rồi trình bày như thể nó đến từ slide. Khi hệ thống không tìm đủ căn cứ để trả lời, thay vì tự bịa ra nội dung, chatbot sẽ hiển thị thông báo "Nội dung hiện tại chưa được giải thích đầy đủ trong bài giảng" thay vì cố gắng trả lời bằng mọi giá. Nguyên tắc này giúp tránh hiện tượng ảo giác (hallucination) — lỗi phổ biến và nguy hiểm nhất của các hệ thống AI tạo sinh khi áp dụng vào giáo dục, nơi thông tin sai lệch có thể khiến người học hiểu nhầm kiến thức.
+**1. Grounding — trả lời phải truy được về nguồn, không thì từ chối**
 
-2. Transparency – Minh bạch nguồn gốc câu trả lời
+`verifyQuote()` trong `codebase/server.js`: sau khi model trả lời, **server** kiểm `citation.quote` có xuất hiện **nguyên văn** trong trang đã truy xuất hay không. Không khớp → hạ `confidence` xuống `low` và gắn cờ `unverified`, giao diện hiện chip "chưa đối chiếu được nguồn". Model không tự phong cho mình là đáng tin được.
 
-Mọi câu trả lời của chatbot đều bắt buộc phải hiển thị số slide và đoạn trích liên quan (mục 10.2, 7.2, và các tiêu chí AC-01, AC-02). Người học không phải "tin mù" vào AI mà có thể tự đối chiếu ngược lại slide gốc để kiểm chứng. Nguyên tắc này giúp xây dựng lòng tin (trust calibration) giữa người dùng và hệ thống AI, đồng thời cho phép người học đánh giá được mức độ tin cậy của từng câu trả lời thay vì chấp nhận nó một cách thụ động.
+Ba đường từ chối (`INSUFFICIENT_TEXT` / `CLARIFY_TEXT` / `OUT_OF_SCOPE_TEXT`) do **server quyết câu chữ cuối cùng**, model chỉ đề xuất — nên một model nói nhiều không thể lách qua.
 
-3. User control – Trao quyền kiểm soát cho người dùng
+> *Tự kiểm:* hỏi "LoRA và QLoRA khác nhau thế nào?" (không có trong 29 trang) → phải ra `insufficient`. Golden set case T04–T05 đo đúng chỗ này, đạt 100% qua 5 lượt chạy.
 
-Nguyên tắc này thể hiện qua cơ chế opt-out ở mục 8.5: sau mỗi micro quiz, người học có toàn quyền quyết định câu hỏi đó có được đưa vào quiz tổng hợp cuối bài hay không, và có thể thay đổi lựa chọn này bất cứ lúc nào trước khi bắt đầu làm quiz tổng hợp. Đặc biệt, mục 8.6 quy định rating và opt-out là hai hành động hoàn toàn độc lập — hệ thống không tự động loại một câu hỏi chỉ vì người học đánh giá thấp (mục 20.4). Điều này đảm bảo AI không âm thầm đưa ra quyết định thay người dùng, mà luôn để con người là người quyết định cuối cùng.
+**2. Transparency — nói rõ mức kiểm chứng, kể cả khi thấp**
 
-4. Human-in-the-loop – Con người xác nhận trước khi công bố nội dung chính thức
+Mỗi câu trả lời kèm số trang + đoạn trích, và trường `citation.verified` cho biết server đã đối chiếu được hay chưa.
 
-Ở phần AI tái tạo diagram (mục 14, 15), AI chỉ đề xuất phương án mới chứ không bao giờ tự động thay thế nội dung slide gốc. Giảng viên bắt buộc phải Approve, Regenerate hoặc Reject, và có thể chỉnh sửa thủ công trước khi hệ thống xuất bản phiên bản PDF mới (FR-24, FR-25, AC-09). Việc giữ con người trong vòng lặp kiểm duyệt trước các thay đổi có tác động lớn (ảnh hưởng đến toàn bộ người học) giúp giảm rủi ro AI tạo ra nội dung sai nhưng vẫn được lan truyền như một nguồn chính thức.
+Chỗ đáng nói nhất là luồng khoanh vùng ảnh: câu trả lời đọc từ **pixel** thì `verifyQuote()` không áp dụng được — thứ model mô tả (mũi tên, bố cục) vốn không tồn tại dưới dạng chữ. Thay vì im lặng hoặc giả vờ đã đối chiếu, server trả `kind: "visual"` + `citation.groundedIn: "image"` và giao diện gắn chip **"đọc từ hình — chưa đối chiếu được với text"**. Khai mức tin cậy thấp hơn thay vì che đi.
 
+> *Tự kiểm:* bật "Khoanh hình", khoanh một diagram rồi hỏi → chip cảnh báo phải hiện.
+
+**3. User control — người học quyết, AI không tự ý thay**
+
+Sau mỗi micro quiz, người học tự chọn câu đó có vào quiz tổng hợp cuối bài hay không, và đổi lại được bất cứ lúc nào **trước khi** bắt đầu làm. Rating và opt-out là **hai hành động độc lập** — hệ thống không tự loại một câu chỉ vì bị đánh giá thấp.
+
+Danh sách câu bị **khoá** ngay khi quiz tổng hợp bắt đầu (`isFinalLocked()` trong `app.js`), để lựa chọn của người học không bị đổi giữa chừng.
+
+> *Tự kiểm:* đánh giá "chưa hữu ích" một câu nhưng vẫn để opt-in → câu đó vẫn phải xuất hiện trong quiz tổng hợp.
+
+**4. Từ chối có lối ra — không đủ tín hiệu thì không đoán**
+
+`POST /api/admin/suggestions`: nếu một trang chưa đủ tín hiệu (`questionCount < 2` **và** `highlightCount < 2`), server **từ chối gọi model** và trả `422` kèm lý do rõ ràng, thay vì để model nặn ra một đề xuất từ chỗ trống. Giảng viên nhận được câu "chưa đủ dữ liệu" — đúng hơn là một lời khuyên nghe hay nhưng vô căn cứ.
+
+Prompt cũng cấm bịa số: model chỉ được dùng các con số server đưa vào, và `evidence` trả kèm để giảng viên đối chiếu.
+
+> *Tự kiểm:* `npm run test:suggestion` — 5 case đo riêng ngưỡng chặn này, đạt 5/5.
 
 # §5. Kiểu lỗi — 4 lớp chỗ khó + kịch bản
 
@@ -256,6 +273,7 @@ Provider: Claude `claude-haiku-4-5`. Chạy trọn bộ 24 case mỗi lượt, k
 | 3 | 67% (8/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 83% | T17, T20, T23, T24 |
 | 4 | 67% (8/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 83% | T17, T20, T23, T24 |
 | 5 | 83% (10/12) | 100% (5/5) | 100% (4/4) | 100% (3/3) | 92% | T20, T23 |
+| 6 | 75% (9/12) | 100% (5/5) | 100% (4/4) | 67% (2/3) | 83% | T13, T17, T20, T23 |
 
 Hai lần sửa code giữa các lượt, **không sửa case và không sửa bar**:
 
@@ -284,10 +302,27 @@ Hai lần sửa code giữa các lượt, **không sửa case và không sửa b
 
 **Dao động giữa các lượt là phát hiện đáng kể riêng.** Lượt 3 và 4 chạy trên **cùng một bản code, cùng bộ case**, ra 83% và 83%; lượt 2 và 5 ra 92%. Chiều "Đúng-có-căn-cứ" dao động 67%–83% do model lúc chép nguyên văn lúc tóm tắt. Hệ quả: **một con số từ một lượt chạy duy nhất là không đáng tin** — mọi kết luận nên dựa trên nhiều lượt. Hai chiều "An toàn phạm vi" và "Từ chối đúng lúc" thì tuyệt đối ổn định 100% qua cả 5 lượt, vì server quyết câu chữ cuối cùng chứ không để model tự do.
 
+### Bộ thứ hai: smart suggestion (`eval/golden-set-suggestion.json`)
+
+Tính năng gợi ý giảng viên nên sửa trang nào được đo bằng bộ riêng, 11 case, chạy qua `POST /api/admin/suggestions`. Mỗi case **tự nạp một bộ event cố định** vào `codebase/var/events.jsonl` rồi mới gọi, nên kết quả tái lập được thay vì phụ thuộc dữ liệu đang có trên máy; file gốc được backup và khôi phục kể cả khi runner lỗi giữa chừng.
+
+| Chiều | Định nghĩa (chấm bằng máy) | Case |
+|---|---|---|
+| **Chặn khi thiếu tín hiệu** | Trang có `< 2` câu hỏi **và** `< 2` lượt bôi đen phải trả `422` và **không gọi model**. Bao cả hai ranh giới: đúng 1 câu hỏi, đúng 1 lượt bôi đen. | S01–S05 |
+| **Không bịa số** | Trích **mọi** con số trong `insight`/`recommendation` rồi đối chiếu tập số server thực sự đưa vào prompt. | S06–S07 |
+| **Bám đúng trang** | `pageNumber` trả về khớp trang được hỏi, kể cả khi trang khác cũng có tín hiệu; trang không tồn tại → `404`; sai kiểu → `400`. | S08, S10, S11 |
+| **Bằng chứng đúng** | `affectedLearners` đếm **người** (sessionId phân biệt) chứ không đếm lượt; `affectedRate` không vượt 100%. | S09 |
+
+**Kết quả: 11/11 (100%)** — cả 4 chiều đều 100%.
+
+> **Đã thử ngược bộ phát hiện bịa số.** Một bộ test luôn pass thì vô dụng, nên chiều "không bịa số" được kiểm bằng cách tiêm câu bịa vào: với câu *"trang 2 có 47 người hỏi, tỷ lệ sai 89% và 12 lượt bôi đen"* nó bắt đúng cả ba số `47, 89, 12`; với câu trung thực nó trả về rỗng. Nên con số 100% là thật, không phải do bộ đo quá dễ.
+>
+> **Giới hạn đã biết:** bộ phát hiện bỏ qua số ≤ 1 (vì tiếng Việt dùng "một", "hai" như từ nối) và chấp nhận lệch 1 đơn vị do làm tròn phần trăm. Nghĩa là nếu model ghi "2 lần sai" trong khi thật ra là 3, nó **sẽ lọt**. Đây là đánh đổi có ý thức để tránh báo động giả, không phải sơ suất.
+
 ### Việc còn thiếu, khai rõ
 
 1. **0/24 case từ chatlog thật** — cần `data/vlearn-pack/` mới dựng được ≥10 case theo yêu cầu R4.
-2. **Chưa đo `/api/tutor/quiz` và `/api/tutor/grade`** — golden set hiện chỉ phủ quyết định AI trung tâm là câu trả lời có trích dẫn.
+2. **Chưa đo `/api/tutor/quiz` và `/api/tutor/grade`** — hai bộ hiện có phủ câu trả lời có trích dẫn (24 case) và smart suggestion (11 case); sinh micro quiz và chấm tự luận vẫn chưa có case nào.
 3. **Chưa chạy đối chứng trên Gemini** — key Gemini trong `.env` đang sai định dạng nên nhánh đó chưa chạy được. Trình chạy đã ghi sẵn `provider` và `model` vào mỗi file kết quả để so sánh khi có key hợp lệ.
 
 # §8. Phân công & kế hoạch
@@ -353,4 +388,8 @@ Hai lần sửa code giữa các lượt, **không sửa case và không sửa b
 | CP5 | Tìm 3 user thật + nhận feedback | Có feedback thực tế và cải tiến theo |
 | CP6 | Viết lại §7 bằng golden set đo trên endpoint thật (24 case, 5 lượt chạy) | §7 cũ vẫn là template ví dụ Hướng B; bộ cũ lại chấm intent-router không có AI |
 | CP6 | Sửa `flatten()`: chuẩn hoá dấu câu kiểu chữ | Golden set lượt 1 cho thấy 5 case trượt oan — trích dẫn trung thực bị đánh trượt vì nháy cong |
+| CP6 | Thêm bộ golden set thứ hai cho smart suggestion (11 case) + chạy cả hai bộ | Yêu cầu từ nhóm: tính năng gợi ý sửa slide chưa có case nào đo |
+| CP6 | Viết lại §4b: 4 nguyên tắc trỏ vào code thật thay vì trỏ vào PRD | Rubric R2 đòi mỗi nguyên tắc trỏ được vào chỗ cụ thể trong prototype |
+| CP6 | Thêm 4 kịch bản §5 cho luồng ảnh và smart suggestion | Hai tính năng mới chưa có kịch bản chỗ khó nào |
+| CP6 | Đổi màu theo app VLearn thật + thu gọn được hai panel | Demo trông gần với sản phẩm thật hơn |
 | CP6 | Sửa `flatten()`: loại ký tự Private Use Area | T24 trượt tất định 4 lượt liền: tr17 chứa U+E08B/U+E088 từ font icon nhúng |

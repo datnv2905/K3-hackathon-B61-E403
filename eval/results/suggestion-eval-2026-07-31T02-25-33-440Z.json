@@ -1,0 +1,269 @@
+{
+  "summary": {
+    "dataset_id": "vlearn_suggestion_golden_v1",
+    "base_url": "http://localhost:5100",
+    "provider": "claude",
+    "model": "claude-haiku-4-5",
+    "started_at": "2026-07-31T02:25:33.440Z",
+    "finished_at": "2026-07-31T02:25:49.932Z",
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "pass_rate": 1,
+    "by_dimension": {
+      "signal_guard": {
+        "total": 5,
+        "passed": 5,
+        "rate": 1
+      },
+      "no_fabricated_numbers": {
+        "total": 2,
+        "passed": 2,
+        "rate": 1
+      },
+      "page_fidelity": {
+        "total": 3,
+        "passed": 3,
+        "rate": 1
+      },
+      "evidence_integrity": {
+        "total": 1,
+        "passed": 1,
+        "rate": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "S01",
+      "dimension": "signal_guard",
+      "pageNumber": 3,
+      "pass": true,
+      "expected": {
+        "status": 422
+      },
+      "actual": {
+        "status": 422,
+        "error": "Chưa đủ tín hiệu ở trang 3 để tạo smart suggestion (cần ít nhất 2 câu hỏi hoặc 2 lượt bôi đen)."
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S02",
+      "dimension": "signal_guard",
+      "pageNumber": 3,
+      "pass": true,
+      "expected": {
+        "status": 422
+      },
+      "actual": {
+        "status": 422,
+        "error": "Chưa đủ tín hiệu ở trang 3 để tạo smart suggestion (cần ít nhất 2 câu hỏi hoặc 2 lượt bôi đen)."
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S03",
+      "dimension": "signal_guard",
+      "pageNumber": 3,
+      "pass": true,
+      "expected": {
+        "status": 422
+      },
+      "actual": {
+        "status": 422,
+        "error": "Chưa đủ tín hiệu ở trang 3 để tạo smart suggestion (cần ít nhất 2 câu hỏi hoặc 2 lượt bôi đen)."
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S04",
+      "dimension": "signal_guard",
+      "pageNumber": 3,
+      "pass": true,
+      "expected": {
+        "status": 200
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 3,
+        "issueType": "Tỷ lệ tương tác thấp trên trang",
+        "insight": "Trang 3 có 2 học viên nhưng không có micro quiz, highlight hoặc đánh giá hữu ích nào. Hai câu hỏi được đặt ra cho thấy học viên cần làm rõ khái niệm problem scoping và cách viết problem statement mà không nhắc đến AI.",
+        "recommendation": "Thêm một micro quiz hoặc highlight trên trang này để giải thích rõ khái niệm problem scoping và quy tắc viết problem statement, từ đó giảm sự nhầm lẫn của học viên.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Problem scoping là gì?",
+            "Vì sao không được nhắc AI trong problem statement?"
+          ]
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S05",
+      "dimension": "signal_guard",
+      "pageNumber": 4,
+      "pass": true,
+      "expected": {
+        "status": 200
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 4,
+        "issueType": "Trang không có hoạt động học tập",
+        "insight": "Trang 4 có 2 lần highlight nhưng không có câu hỏi, micro quiz hoặc nỗ lực trả lời từ 2 học viên. Điều này cho thấy học viên chỉ đọc nội dung mà không thực hành hoặc kiểm tra hiểu biết.",
+        "recommendation": "Thêm ít nhất một câu hỏi hoặc micro quiz trên trang 4 để khuyến khích học viên kiểm tra sự hiểu biết của họ về nội dung.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": []
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S06",
+      "dimension": "no_fabricated_numbers",
+      "pageNumber": 2,
+      "pass": true,
+      "expected": {
+        "status": 200,
+        "noFabricatedNumbers": true
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 2,
+        "issueType": "Tỷ lệ trả lời sai cao",
+        "insight": "Trang 2 có tỷ lệ trả lời sai 67% (2 lần sai trên 3 lần cố gắng), cho thấy nội dung về tiêu chuẩn đánh giá và quy mô khảo sát chưa rõ ràng. Câu hỏi \"Bằng chứng chuẩn A khác chuẩn B thế nào?\" được hỏi 2 lần, phản ánh sự nhầm lẫn của học viên.",
+        "recommendation": "Bổ sung giải thích chi tiết về sự khác biệt giữa các tiêu chuẩn đánh giá và cung cấp ví dụ cụ thể về quy mô khảo sát phù hợp trên trang này.",
+        "evidence": {
+          "affectedLearners": 3,
+          "affectedRate": 1,
+          "wrongRate": 0.6666666666666666,
+          "topQuestions": [
+            "Bằng chứng chuẩn A khác chuẩn B thế nào?",
+            "Khảo sát bao nhiêu người thì đủ?"
+          ]
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S07",
+      "dimension": "no_fabricated_numbers",
+      "pageNumber": 5,
+      "pass": true,
+      "expected": {
+        "status": 200,
+        "noFabricatedNumbers": true
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 5,
+        "issueType": "Câu hỏi lặp lại nhiều lần",
+        "insight": "Câu hỏi \"Lát cắt một câu gồm mấy phần?\" được hỏi 2 lần trên trang 5, cho thấy học viên gặp khó khăn với khái niệm này. Không có học viên nào tạo micro quiz hoặc đánh giá tính hữu ích của trang để giúp làm rõ nội dung.",
+        "recommendation": "Thêm một ví dụ cụ thể hoặc giải thích chi tiết về cách lát cắt câu thành các phần để giải quyết câu hỏi lặp lại này.",
+        "evidence": {
+          "affectedLearners": 3,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Lát cắt một câu gồm mấy phần?",
+            "Non-goal nghĩa là gì?"
+          ]
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S08",
+      "dimension": "page_fidelity",
+      "pageNumber": 6,
+      "pass": true,
+      "expected": {
+        "status": 200,
+        "pageNumber": 6,
+        "noFabricatedNumbers": true
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 6,
+        "issueType": "Câu hỏi lặp lại về thời điểm chốt chất lượng",
+        "insight": "Câu hỏi \"Quality bar chốt lúc nào?\" được hỏi 2 lần trên trang này, cho thấy học viên (2 người) đều gặp khó khăn với khái niệm về thời điểm xác định tiêu chuẩn chất lượng.",
+        "recommendation": "Thêm giải thích rõ ràng hoặc ví dụ cụ thể về thời điểm \"chốt quality bar\" trong nội dung trang 6 để giải đáp thắc mắc này trước khi học viên phải hỏi.",
+        "evidence": {
+          "affectedLearners": 2,
+          "affectedRate": 1,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Quality bar chốt lúc nào?"
+          ]
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S09",
+      "dimension": "evidence_integrity",
+      "pageNumber": 1,
+      "pass": true,
+      "expected": {
+        "status": 200,
+        "affectedLearners": 1,
+        "affectedRateAtMost": 1
+      },
+      "actual": {
+        "status": 200,
+        "pageNumber": 1,
+        "issueType": "Trang không có hoạt động tương tác",
+        "insight": "Trang 1 có 5 câu hỏi từ học viên nhưng không có micro quiz, highlight hoặc đánh giá hữu ích/không hữu ích nào. Điều này cho thấy học viên chỉ đặt câu hỏi mà không có cơ hội thực hành hoặc phản hồi về nội dung.",
+        "recommendation": "Thêm ít nhất 1-2 micro quiz hoặc highlight trên trang này để giúp học viên kiểm tra hiểu biết và tương tác sâu hơn với nội dung.",
+        "evidence": {
+          "affectedLearners": 1,
+          "affectedRate": 0.5,
+          "wrongRate": 0,
+          "topQuestions": [
+            "Câu 1",
+            "Câu 2",
+            "Câu 3",
+            "Câu 4",
+            "Câu 5"
+          ]
+        }
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S10",
+      "dimension": "page_fidelity",
+      "pageNumber": 99,
+      "pass": true,
+      "expected": {
+        "status": 404
+      },
+      "actual": {
+        "status": 404,
+        "error": "No aggregate for page 99"
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "S11",
+      "dimension": "page_fidelity",
+      "pageNumber": "khong-phai-so",
+      "pass": true,
+      "expected": {
+        "status": 400
+      },
+      "actual": {
+        "status": 400,
+        "error": "pageNumber is required"
+      },
+      "diagnostics": []
+    }
+  ]
+}
